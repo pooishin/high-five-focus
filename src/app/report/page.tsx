@@ -286,7 +286,7 @@ export default function Report() {
                             textDecoration: "none"
                         }}
                     >
-                        <span>←</span> 홈으로
+                        <span>←</span> HOME
                     </Link>
                     <h1 style={{ fontSize: "1.2rem", fontWeight: 800 }}>MY REPORT</h1>
                 </div>
