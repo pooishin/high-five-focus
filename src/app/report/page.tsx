@@ -35,6 +35,34 @@ export default function Report() {
     const [userStats, setUserStats] = useState<UserStats>({ exp: 0, level: 1, coins: 0, monthlyCoins: 0 });
     const [toast, setToast] = useState<string | null>(null);
 
+    // Swipe Navigation
+    const [touchStart, setTouchStart] = useState({ x: 0, y: 0 });
+    const [touchEnd, setTouchEnd] = useState({ x: 0, y: 0 });
+
+    const handleTouchStart = (e: React.TouchEvent) => {
+        setTouchStart({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        setTouchEnd({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
+    };
+
+    const handleTouchEnd = () => {
+        if (!touchStart.x || !touchEnd.x) return;
+
+        const distanceX = touchStart.x - touchEnd.x;
+        const distanceY = touchStart.y - touchEnd.y;
+        const minSwipeDistance = 50;
+
+        // 오른쪽으로 스와이프 (← 방향의 터치 이동, distanceX < 0) -> Home 이동
+        if (Math.abs(distanceX) > Math.abs(distanceY) * 2 && distanceX < -minSwipeDistance) {
+            router.push('/');
+        }
+
+        setTouchStart({ x: 0, y: 0 });
+        setTouchEnd({ x: 0, y: 0 });
+    };
+
     useEffect(() => {
         if (!user) return;
 

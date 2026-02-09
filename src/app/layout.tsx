@@ -11,6 +11,16 @@ const outfit = Outfit({
 export const metadata: Metadata = {
   title: "Hi-Five Focus | 5-슬롯 타임박싱 타이머",
   description: "전략적인 포기와 압도적 집중, 하이파이브 포커스로 하루 5개 핵심 과업에 몰입하세요.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Hi-Five Focus"
+  },
+  formatDetection: {
+    telephone: false
+  },
+  themeColor: "#000000"
 };
 
 export const viewport: Viewport = {

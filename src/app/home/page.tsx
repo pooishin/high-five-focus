@@ -61,21 +61,47 @@ export default function Home() {
             status: t.status
           })));
         } else {
-          router.push('/plan');
+          setTasks([]);
         }
       };
       loadData();
     }
   }, [user]);
 
+  // 사운드 재생 함수
+  const playClapSound = (type: 'short' | 'long') => {
+    try {
+      const audio = new Audio(type === 'short' ? '/assets/sounds/clapping.mp3' : '/assets/sounds/clapping_long.mp3');
+      audio.volume = 0.7;
+      audio.play().catch(e => console.log('Audio play failed (interaction required):', e));
+    } catch (e) {
+      console.error('Audio setup failed:', e);
+    }
+  };
+
   useEffect(() => {
     const interval = setInterval(() => {
       setTasks(prevTasks => {
         const activeIdx = prevTasks.findIndex(t => t.status === "active");
         if (activeIdx === -1) return prevTasks;
+
         setRemainingEnergySeconds(prev => Math.max(0, prev - 1));
+
         const newTasks = [...prevTasks];
-        newTasks[activeIdx] = { ...newTasks[activeIdx], remainingSeconds: newTasks[activeIdx].remainingSeconds - 1 };
+        const nextSeconds = newTasks[activeIdx].remainingSeconds - 1;
+
+        // 0초 도달 시 알림 및 사운드 (한 번만 실행되도록 0일 때만)
+        if (nextSeconds === 0) {
+          playClapSound('short');
+          if (Notification.permission === 'granted') {
+            new Notification("테스크 완료! 👏", {
+              body: `${newTasks[activeIdx].title} 끝! 고생하셨습니다.`,
+              icon: '/assets/images/logo.svg'
+            });
+          }
+        }
+
+        newTasks[activeIdx] = { ...newTasks[activeIdx], remainingSeconds: nextSeconds };
         return newTasks;
       });
     }, 1000);
@@ -109,6 +135,14 @@ export default function Home() {
     const isOvertime = completedTask.remainingSeconds < 0;
     const reward = isOvertime ? 5 : 10;
 
+    // 모든 테스크 완료 체크
+    const pendingTasks = tasks.filter(t => t.id !== completedTask.id && t.status !== 'completed');
+    if (pendingTasks.length === 0) {
+      playClapSound('long');
+    } else {
+      playClapSound('short');
+    }
+
     setStats(prev => {
       const newExp = prev.exp + (isOvertime ? 20 : 50);
       return { ...prev, exp: newExp, level: Math.floor(newExp / 100) + 1, coins: prev.coins + reward };
@@ -139,6 +173,49 @@ export default function Home() {
     const m = Math.floor((s_total % 3600) / 60);
     const s = s_total % 60;
     return `${isNeg ? '-' : ''}${h > 0 ? h + 'h ' : ''}${m > 0 || h > 0 ? m.toString().padStart(2, '0') + 'm ' : ''}${s.toString().padStart(2, '0')}s`;
+  };
+
+  const handleToggleFocusMode = () => {
+    const nextState = !isFocusMode;
+    if (nextState) {
+      if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
+        Notification.requestPermission();
+      }
+      playClapSound('short');
+    }
+    setIsFocusMode(nextState);
+  };
+
+  // 스와이프 제스처 처리
+  const [touchStart, setTouchStart] = useState({ x: 0, y: 0 });
+  const [touchEnd, setTouchEnd] = useState({ x: 0, y: 0 });
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd({ x: e.targetTouches[0].clientX, y: e.targetTouches[0].clientY });
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart.x || !touchEnd.x) return;
+
+    const distanceX = touchStart.x - touchEnd.x;
+    const distanceY = touchStart.y - touchEnd.y;
+    const minSwipeDistance = 50;
+
+    // 좌우 이동이 상하 이동보다 2배 이상 크고, 최소 거리 이상일 때만 스와이프 인식
+    if (Math.abs(distanceX) > Math.abs(distanceY) * 2 && Math.abs(distanceX) > minSwipeDistance) {
+      if (distanceX > 0) {
+        router.push('/report');
+      } else {
+        router.push('/plan');
+      }
+    }
+
+    setTouchStart({ x: 0, y: 0 });
+    setTouchEnd({ x: 0, y: 0 });
   };
 
   const formatTimeHM = (secs: number) => `${Math.floor(secs / 3600)}h ${Math.floor((secs % 3600) / 60)}m`;
@@ -182,11 +259,42 @@ export default function Home() {
     setEditMinutes(task.totalSeconds / 60);
   };
 
+  const handleAddNewTask = () => {
+    setEditingTask({ id: -1, title: "", totalSeconds: 60 * 60, remainingSeconds: 60 * 60, status: "pending" });
+    setEditTitle("");
+    setEditMinutes(60);
+  };
+
   const handleSaveEdit = async () => {
     if (!editingTask) return;
     const newTotal = editMinutes * 60;
-    setTasks(prev => prev.map(t => t.id === editingTask.id ? { ...t, title: editTitle, totalSeconds: newTotal, remainingSeconds: newTotal } : t));
-    if (user) await supabase.from('tasks').update({ title: editTitle, total_seconds: newTotal, remaining_seconds: newTotal }).eq('id', editingTask.id);
+
+    if (editingTask.id === -1) {
+      if (!user) return;
+      const newTask = {
+        user_id: user.uid,
+        title: editTitle || "새로운 과업",
+        total_seconds: newTotal,
+        remaining_seconds: newTotal,
+        status: 'pending',
+        position: tasks.length
+      };
+
+      const { data, error } = await supabase.from('tasks').insert([newTask]).select();
+      if (data && data[0]) {
+        const createdTask: Task = {
+          id: data[0].id,
+          title: data[0].title,
+          totalSeconds: data[0].total_seconds,
+          remainingSeconds: data[0].remaining_seconds,
+          status: data[0].status
+        };
+        setTasks(prev => [...prev, createdTask]);
+      }
+    } else {
+      setTasks(prev => prev.map(t => t.id === editingTask.id ? { ...t, title: editTitle, totalSeconds: newTotal, remainingSeconds: newTotal } : t));
+      if (user) await supabase.from('tasks').update({ title: editTitle, total_seconds: newTotal, remaining_seconds: newTotal }).eq('id', editingTask.id);
+    }
     setEditingTask(null);
   };
 
@@ -202,20 +310,25 @@ export default function Home() {
   if (!user) return null;
 
   return (
-    <main style={{ paddingBottom: '80px' }}>
+    <main
+      className="home-container"
+      style={{ position: 'relative', overflow: 'hidden', minHeight: '100vh', touchAction: 'pan-y' }}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       {showCompletion.visible && (
-        <div className="high-five-overlay">
-          <div className="high-five-icon">🤚✨</div>
-          <h2 style={{ color: '#FFD700', marginTop: '1.5rem' }}>HIGH FIVE!</h2>
-          <p style={{ color: '#FFF' }}>"{showCompletion.title}" 완료!</p>
-          <div className="reward-info">
-            <div className="reward-coins">💰 +10 Coins</div>
-            <div className="reward-exp">✨ +50 Focus EXP</div>
+        <div className="completion-overlay animate-pop-in">
+          <div className="completion-content">
+            <div className="hand-icon">✋</div>
+            <h2 className="completion-title">HIGH FIVE!</h2>
+            <p className="completion-subtitle">"{showCompletion.title}" 완료!</p>
           </div>
         </div>
       )}
 
-      <header style={{ padding: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      {/* Header */}
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', padding: '0 0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <button onClick={() => router.push('/plan')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}>
             <Image src="/assets/images/logo.svg" width={28} height={28} alt="Settings" />
@@ -227,7 +340,7 @@ export default function Home() {
             <div style={{ fontSize: '0.75rem', fontWeight: 800 }}>Lv.{stats.level}</div>
             <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{stats.exp} EXP</div>
           </div>
-          <button onClick={() => setIsFocusMode(!isFocusMode)} style={{ background: isFocusMode ? 'var(--primary)' : 'var(--surface-alt)', color: isFocusMode ? '#000' : 'var(--foreground)', padding: '4px 12px', borderRadius: '100px', fontSize: '0.75rem', fontWeight: 800 }}>
+          <button onClick={handleToggleFocusMode} style={{ background: isFocusMode ? 'var(--primary)' : 'var(--surface-alt)', color: isFocusMode ? '#000' : 'var(--foreground)', padding: '4px 12px', borderRadius: '100px', fontSize: '0.75rem', fontWeight: 800 }}>
             {isFocusMode ? '🔥 FOCUS ON' : 'START FOCUS'}
           </button>
         </div>
@@ -248,6 +361,12 @@ export default function Home() {
           {isFocusMode && <div className="focus-message animate-fade-in" style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 16px', borderRadius: '12px', fontSize: '0.9rem', fontWeight: 600, border: '1px solid var(--glass-border)', marginBottom: '1rem', color: 'var(--primary)' }}>{getFocusMessage()}</div>}
 
           <div className="dashboard-list" style={{ padding: 0 }}>
+            {tasks.length === 0 && (
+              <div style={{ padding: '2rem 1rem', textAlign: 'center', opacity: 0.8, marginBottom: '1rem', border: '1px dashed var(--glass-border)', borderRadius: '12px', background: 'rgba(0,0,0,0.2)' }}>
+                <p style={{ marginBottom: '0.5rem', fontSize: '1rem', fontWeight: 700, color: 'var(--primary)' }}>오늘의 계획을 세워보세요! 📝</p>
+                <p style={{ fontSize: '0.8rem', opacity: 0.7 }}>빈 슬롯을 눌러 할 일을 추가할 수 있습니다.</p>
+              </div>
+            )}
             {tasks.map((task, idx) => {
               const ratio = (task.totalSeconds - task.remainingSeconds) / task.totalSeconds;
               const isActive = task.status === "active";
@@ -300,6 +419,29 @@ export default function Home() {
                 </div>
               );
             })}
+
+            {Array.from({ length: Math.max(0, 5 - tasks.length) }).map((_, idx) => (
+              <div
+                key={`empty-${idx}`}
+                className="task-card-horizontal empty-slot"
+                onClick={handleAddNewTask}
+                style={{
+                  marginBottom: '0.6rem',
+                  border: '1px dashed rgba(255,255,255,0.1)',
+                  opacity: 0.6,
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  height: '76px',
+                  cursor: 'pointer',
+                  borderRadius: '16px',
+                  background: 'rgba(255,255,255,0.02)',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <span style={{ fontSize: '1rem', color: 'var(--primary)', fontWeight: 600 }}>+ 할 일 추가</span>
+              </div>
+            ))}
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', padding: '0 10px' }}>

@@ -75,47 +75,48 @@ export default function Login() {
     };
 
     return (
-        <main className="login-container">
-            <div className="login-card animate-fade-in">
+        <main className="login-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', padding: '1.5rem', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <div className="login-card animate-fade-in" style={{ margin: '0 auto', maxWidth: '400px', width: '100%', padding: '2rem 1.5rem', flexShrink: 0 }}>
                 {/* Logo & Title */}
-                <header style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
-                    <div style={{ marginBottom: '1rem' }}>
+                <header style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                    <div style={{ marginBottom: '0.75rem', display: 'flex', justifyContent: 'center' }}>
                         <Image
                             src="/assets/images/logo.svg"
-                            width={80}
-                            height={80}
+                            width={64}
+                            height={64}
                             alt="Hi-Five Focus Logo"
                         />
                     </div>
-                    <h1 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '0.5rem' }}>
+                    <h1 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '0.25rem' }}>
                         Hi-Five Focus
                     </h1>
-                    <p style={{ opacity: 0.7, fontSize: '0.9rem' }}>
+                    <p style={{ opacity: 0.7, fontSize: '0.85rem' }}>
                         전략적인 포기와 압도적 집중
                     </p>
                 </header>
 
                 {/* Guest Mode (Default) */}
-                {mode === 'guest' && (
+                {mode === 'guest' ? (
                     <div className="auth-section">
                         <button
                             type="button"
-                            className="btn-auth btn-guest"
+                            className="btn-primary btn-large"
                             onClick={handleGuestSignIn}
                             disabled={loading}
+                            style={{ width: '100%', marginBottom: '1rem', padding: '0.9rem', fontSize: '1rem', fontWeight: 700 }}
                         >
                             {loading ? '로딩 중...' : '🚀 게스트로 시작하기'}
                         </button>
 
-                        <div className="divider">
-                            <span>또는</span>
+                        <div className="divider" style={{ margin: '1.5rem 0' }}>
+                            <span style={{ background: 'var(--surface)', padding: '0 10px', fontSize: '0.8rem', opacity: 0.5 }}>또는</span>
                         </div>
 
                         <button
                             className="btn-auth btn-google"
                             onClick={handleGoogleSignIn}
                             disabled={loading}
-                            style={{ marginBottom: '1.2rem' }}
+                            style={{ width: '100%', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', padding: '0.8rem', borderRadius: '12px', background: '#FFF', color: '#000', border: 'none', fontWeight: 600, fontSize: '0.95rem' }}
                         >
                             <span style={{ fontSize: '1.2rem' }}>🔐</span>
                             Google로 계속하기
@@ -125,24 +126,22 @@ export default function Login() {
                             className="btn-auth btn-email"
                             onClick={() => setMode('signin')}
                             disabled={loading}
-                            style={{ marginBottom: '2.5rem' }}
+                            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', padding: '0.8rem', borderRadius: '12px', background: 'rgba(255,255,255,0.08)', color: '#FFF', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.9rem' }}
                         >
-                            ✉️ 이메일로 로그인
+                            <span style={{ fontSize: '1.1rem' }}>✉️</span>
+                            이메일로 로그인
                         </button>
 
-                        <p style={{ textAlign: 'center', marginTop: '2rem', fontSize: '0.75rem', opacity: 0.6 }}>
-                            💡 게스트 모드는 브라우저에 임시 세션으로 저장됩니다.<br />
-                            Supabase 연동을 통해 모든 기기에서 데이터를 동기화하세요.
+                        <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.75rem', opacity: 0.5, lineHeight: 1.5 }}>
+                            💡 게스트 모드는 기기에 임시 저장됩니다.<br />
+                            로그인하여 데이터를 영구 보관하세요.
                         </p>
                     </div>
-                )}
-
-                {/* Email Sign In/Up */}
-                {(mode === 'signin' || mode === 'signup') && (
+                ) : (mode === 'signin' || mode === 'signup') && (
                     <div className="auth-section">
-                        <form onSubmit={handleEmailAuth}>
+                        <form onSubmit={handleEmailAuth} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <div className="input-group">
-                                <label>이메일</label>
+                                <label style={{ fontSize: '0.85rem', marginBottom: '0.4rem', display: 'block', opacity: 0.8 }}>이메일</label>
                                 <input
                                     type="email"
                                     value={email}
@@ -150,11 +149,12 @@ export default function Login() {
                                     placeholder="your@email.com"
                                     required
                                     className="auth-input"
+                                    style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.2)', color: '#FFF', fontSize: '1rem' }}
                                 />
                             </div>
 
                             <div className="input-group">
-                                <label>비밀번호</label>
+                                <label style={{ fontSize: '0.85rem', marginBottom: '0.4rem', display: 'block', opacity: 0.8 }}>비밀번호</label>
                                 <input
                                     type="password"
                                     value={password}
@@ -163,55 +163,47 @@ export default function Login() {
                                     required
                                     minLength={6}
                                     className="auth-input"
+                                    style={{ width: '100%', padding: '0.8rem', borderRadius: '10px', border: '1px solid var(--glass-border)', background: 'rgba(0,0,0,0.2)', color: '#FFF', fontSize: '1rem' }}
                                 />
                             </div>
 
                             {error && (
-                                <div className="error-message">
+                                <div className="error-message" style={{ fontSize: '0.85rem', color: '#ff6b6b', background: 'rgba(255, 82, 82, 0.1)', padding: '0.8rem', borderRadius: '8px', textAlign: 'center' }}>
                                     ⚠️ {error}
                                 </div>
                             )}
 
                             <button
                                 type="submit"
-                                className="btn-primary btn-large"
+                                className="btn-primary"
                                 disabled={loading}
-                                style={{ width: '100%', marginTop: '1rem' }}
+                                style={{ width: '100%', padding: '0.9rem', marginTop: '0.5rem', fontSize: '1rem', fontWeight: 700 }}
                             >
                                 {loading ? '처리 중...' : mode === 'signup' ? '회원가입' : '로그인'}
                             </button>
                         </form>
 
-                        <div className="divider">
-                            <span>또는</span>
+                        <div className="divider" style={{ margin: '1.5rem 0', textAlign: 'center' }}>
+                            <span style={{ fontSize: '0.8rem', opacity: 0.5 }}>또는</span>
                         </div>
 
-                        <button
-                            className="btn-google"
-                            onClick={handleGoogleSignIn}
-                            disabled={loading}
-                        >
-                            <span style={{ fontSize: '1.2rem', marginRight: '0.5rem' }}>🔐</span>
-                            Google로 계속하기
-                        </button>
-
-                        <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+                        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.8rem', alignItems: 'center' }}>
                             {mode === 'signin' ? (
-                                <p style={{ fontSize: '0.85rem' }}>
+                                <p style={{ fontSize: '0.9rem', opacity: 0.9 }}>
                                     계정이 없으신가요?{' '}
                                     <button
                                         onClick={() => setMode('signup')}
-                                        className="link-button"
+                                        style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline', padding: '0 5px' }}
                                     >
                                         회원가입
                                     </button>
                                 </p>
                             ) : (
-                                <p style={{ fontSize: '0.85rem' }}>
+                                <p style={{ fontSize: '0.9rem', opacity: 0.9 }}>
                                     이미 계정이 있으신가요?{' '}
                                     <button
                                         onClick={() => setMode('signin')}
-                                        className="link-button"
+                                        style={{ background: 'none', border: 'none', color: 'var(--primary)', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline', padding: '0 5px' }}
                                     >
                                         로그인
                                     </button>
@@ -220,10 +212,9 @@ export default function Login() {
 
                             <button
                                 onClick={() => setMode('guest')}
-                                className="link-button"
-                                style={{ marginTop: '0.5rem', fontSize: '0.8rem' }}
+                                style={{ fontSize: '0.85rem', background: 'none', border: 'none', color: 'rgba(255,255,255,0.6)', cursor: 'pointer', marginTop: '0.5rem' }}
                             >
-                                ← 게스트로 돌아가기
+                                ← 초기 화면으로 돌아가기
                             </button>
                         </div>
                     </div>
@@ -231,21 +222,20 @@ export default function Login() {
             </div>
 
             {/* Features Section */}
-            <div className="features-grid">
-                <div className="feature-card">
-                    <div className="feature-icon">⚡</div>
-                    <h3>5-슬롯 집중</h3>
-                    <p>하루 5개의 핵심 과업만 선택</p>
+            <div className="features-grid" style={{ marginTop: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.8rem', paddingBottom: '2rem' }}>
+                <div className="feature-card" style={{ padding: '0.8rem 1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '1rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ fontSize: '1.5rem' }}>⚡</div>
+                    <div>
+                        <h3 style={{ fontSize: '0.9rem', marginBottom: '0.2rem', fontWeight: 700 }}>5-슬롯 집중</h3>
+                        <p style={{ fontSize: '0.75rem', opacity: 0.6, margin: 0 }}>하루 5개의 핵심 과업만 선택</p>
+                    </div>
                 </div>
-                <div className="feature-card">
-                    <div className="feature-icon">🎮</div>
-                    <h3>게이미피케이션</h3>
-                    <p>레벨업하고 코인을 획득하세요</p>
-                </div>
-                <div className="feature-card">
-                    <div className="feature-icon">📊</div>
-                    <h3>실시간 리포트</h3>
-                    <p>집중 시간을 시각화하고 공유</p>
+                <div className="feature-card" style={{ padding: '0.8rem 1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '1rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ fontSize: '1.5rem' }}>🎮</div>
+                    <div>
+                        <h3 style={{ fontSize: '0.9rem', marginBottom: '0.2rem' }}>게이미피케이션</h3>
+                        <p style={{ fontSize: '0.75rem', opacity: 0.6, margin: 0 }}>레벨업하고 코인을 획득하세요</p>
+                    </div>
                 </div>
             </div>
         </main>

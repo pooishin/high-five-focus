@@ -44,23 +44,11 @@ export default function PlanPage() {
 
   const handleStart = async () => {
     if (user) {
-      const tasksToInsert = tasks.map((t, index) => ({
-        user_id: user.uid,
-        title: t.title,
-        total_seconds: t.totalSeconds,
-        remaining_seconds: t.totalSeconds,
-        status: 'pending',
-        position: index
-      }));
-
+      // 기존 테스크 초기화 (새로운 하루 시작)
       await supabase.from('tasks').delete().eq('user_id', user.uid);
-      const { error } = await supabase.from('tasks').insert(tasksToInsert);
-      if (error) {
-        console.error('Error saving plan:', error);
-        return;
-      }
 
-      const initialReward = 50 + (tasks.length * 10);
+      // 시작 보상 (선택 사항, 여기서는 0으로 설정하거나 제거 가능)
+      const initialReward = 10;
       await supabase.rpc('increment_stats', {
         user_id: user.uid,
         exp_bonus: 0,
