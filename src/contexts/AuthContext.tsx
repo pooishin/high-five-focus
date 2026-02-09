@@ -2,8 +2,19 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
+import {
+    onAuthStateChanged,
+    signInWithPopup,
+    GoogleAuthProvider,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    signInAnonymously,
+    signOut,
+    User
+} from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
 
-// 간단한 User 인터페이스 (Firebase User 대체)
 interface SimpleUser {
     uid: string;
     email: string | null;
@@ -32,59 +43,103 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
-    // 컴포넌트 마운트 시 localStorage에서 사용자 정보 로드
+    // Firebase Auth 상태 감시
     useEffect(() => {
-        const loadUser = () => {
-            try {
-                const savedUser = localStorage.getItem('currentUser');
-                if (savedUser) {
-                    setUser(JSON.parse(savedUser));
-                }
-            } catch (error) {
-                console.error('Failed to load user:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
+        const unsubscribe = onAuthStateChanged(auth,
+            async (firebaseUser) => {
+                if (firebaseUser) {
+                    const userData: SimpleUser = {
+                        uid: firebaseUser.uid,
+                        email: firebaseUser.email,
+                        displayName: firebaseUser.displayName || '사용자',
+                        photoURL: firebaseUser.photoURL,
+                        isAnonymous: firebaseUser.isAnonymous
+                    };
 
-        loadUser();
+                    setUser(userData);
+
+                    // Firestore에 사용자 데이터 저장/업데이트
+                    await syncUserWithFirestore(firebaseUser);
+                } else {
+                    setUser(null);
+                }
+                setLoading(false);
+            },
+            (error) => {
+                console.error('Auth state change error:', error);
+                setLoading(false); // 에러 발생 시에도 로딩 해제하여 UI 렌더링 허용
+            }
+        );
+
+        return () => unsubscribe();
     }, []);
 
-    // 사용자 정보를 localStorage에 저장
-    const saveUser = (userData: SimpleUser) => {
-        localStorage.setItem('currentUser', JSON.stringify(userData));
-        setUser(userData);
+    const syncUserWithFirestore = async (firebaseUser: User) => {
+        try {
+            const userDocRef = doc(db, 'users', firebaseUser.uid);
+            const userDoc = await getDoc(userDocRef);
+
+            if (!userDoc.exists()) {
+                // 신규 사용자 등록
+                await setDoc(userDocRef, {
+                    uid: firebaseUser.uid,
+                    email: firebaseUser.email,
+                    displayName: firebaseUser.displayName || '사용자',
+                    photoURL: firebaseUser.photoURL,
+                    createdAt: serverTimestamp(),
+                    lastLogin: serverTimestamp(),
+                    isAnonymous: firebaseUser.isAnonymous,
+                    level: 1,
+                    exp: 0,
+                    coins: 0
+                });
+            } else {
+                // 기존 사용자 로그인 시간 업데이트
+                await setDoc(userDocRef, {
+                    lastLogin: serverTimestamp()
+                }, { merge: true });
+            }
+        } catch (error) {
+            console.error('Firestore sync error:', error);
+        }
     };
 
     const signInWithGoogle = async () => {
-        // 임시로 Google 로그인 비활성화 (Firebase 필요)
-        throw new Error('Google 로그인은 Firebase 설정이 필요합니다. 게스트 모드를 사용해주세요.');
+        try {
+            const provider = new GoogleAuthProvider();
+            await signInWithPopup(auth, provider);
+            router.push('/');
+        } catch (error: any) {
+            console.error('Google sign in error:', error);
+            throw error;
+        }
     };
 
     const signInWithEmail = async (email: string, password: string) => {
-        // 임시로 이메일 로그인 비활성화 (Firebase 필요)
-        throw new Error('이메일 로그인은 Firebase 설정이 필요합니다. 게스트 모드를 사용해주세요.');
+        try {
+            await signInWithEmailAndPassword(auth, email, password);
+            router.push('/');
+        } catch (error: any) {
+            console.error('Email sign in error:', error);
+            throw error;
+        }
     };
 
     const signUpWithEmail = async (email: string, password: string) => {
-        // 임시로 회원가입 비활성화 (Firebase 필요)
-        throw new Error('회원가입은 Firebase 설정이 필요합니다. 게스트 모드를 사용해주세요.');
+        try {
+            await createUserWithEmailAndPassword(auth, email, password);
+            router.push('/');
+        } catch (error: any) {
+            console.error('Sign up error:', error);
+            throw error;
+        }
     };
 
     const signInAsGuest = async () => {
         try {
-            // 게스트 사용자 생성
-            const guestUser: SimpleUser = {
-                uid: `guest_${Date.now()}`,
-                email: null,
-                displayName: '게스트',
-                photoURL: null,
-                isAnonymous: true
-            };
-
-            saveUser(guestUser);
-            console.log('게스트 모드로 로그인되었습니다.');
-        } catch (error) {
+            await signInAnonymously(auth);
+            router.push('/');
+        } catch (error: any) {
             console.error('Guest sign in error:', error);
             throw error;
         }
@@ -92,8 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const logout = async () => {
         try {
-            localStorage.removeItem('currentUser');
-            setUser(null);
+            await signOut(auth);
             router.push('/login');
         } catch (error) {
             console.error('Logout error:', error);
@@ -102,8 +156,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     const migrateLocalData = async () => {
-        // localStorage 기반이므로 마이그레이션 불필요
-        console.log('LocalStorage 모드에서는 데이터 마이그레이션이 필요하지 않습니다.');
+        // 추후 localStorage의 데이터를 Firestore로 옮기는 로직 구현 가능
+        console.log('Migrating local data to cloud...');
     };
 
     const value = {
