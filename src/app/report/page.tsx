@@ -1,0 +1,348 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+
+interface ChartData {
+    label: string;
+    value: number;
+    time: string;
+}
+
+interface DailyRecord {
+    date: string;
+    focusMinutes: number;
+    tasksCompleted: number;
+    coinsEarned: number;
+}
+
+interface UserStats {
+    exp: number;
+    level: number;
+    coins: number;
+    monthlyCoins: number;
+}
+
+export default function Report() {
+    const router = useRouter();
+    const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("weekly");
+    const [dailyRecords, setDailyRecords] = useState<DailyRecord[]>([]);
+    const [userStats, setUserStats] = useState<UserStats>({ exp: 0, level: 1, coins: 0, monthlyCoins: 0 });
+    const [toast, setToast] = useState<string | null>(null);
+
+    useEffect(() => {
+        // Load data from localStorage
+        const savedRecords = localStorage.getItem('focusRecords');
+        const savedStats = localStorage.getItem('userStats');
+
+        if (savedRecords) {
+            setDailyRecords(JSON.parse(savedRecords));
+        }
+
+        if (savedStats) {
+            setUserStats(JSON.parse(savedStats));
+        }
+    }, []);
+
+    const getDailyData = (): ChartData[] => {
+        // Daily View: Show hypothetical hourly breakdown for 'Today'
+        // Since we don't track hourly data yet, we distribute today's total minutes across working hours.
+        const todayStr = new Date().toISOString().split('T')[0];
+        const todayRecord = dailyRecords.find(r => r.date === todayStr);
+        const totalMinutes = todayRecord?.focusMinutes || 0;
+
+        const workingHours = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+        const data: ChartData[] = [];
+
+        // Simple distribution simulation based on total minutes
+        // This is a visual approximation for MVP
+        let remaining = totalMinutes;
+
+        workingHours.forEach(hour => {
+            // Random-ish distribution focused around morning/afternoon peaks
+            let minutes = 0;
+            if (remaining > 0) {
+                const maxForHour = 45; // Max 45 mins per hour focus
+                const randomFactor = Math.random();
+                minutes = Math.min(remaining, Math.floor(maxForHour * randomFactor));
+                if (hour === 20) minutes = remaining; // Dump rest in last slot
+                remaining -= minutes;
+            }
+
+            data.push({
+                label: `${hour}h`,
+                value: Math.min(100, (minutes / 60) * 100),
+                time: `${minutes}m`
+            });
+        });
+
+        return data;
+    };
+
+    const getWeeklyData = (): ChartData[] => {
+        const today = new Date();
+        const weekData: ChartData[] = [];
+
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().split('T')[0];
+            const displayLabel = dateStr.slice(5); // MM-DD
+
+            const record = dailyRecords.find(r => r.date === dateStr);
+            const minutes = record?.focusMinutes || 0;
+            const hours = Math.floor(minutes / 60);
+            const mins = Math.floor(minutes % 60);
+
+            weekData.push({
+                label: ['일', '월', '화', '수', '목', '금', '토'][date.getDay()],
+                value: Math.min(100, (minutes / 480) * 100), // Assuming 8h max
+                time: hours > 0 ? `${hours}h ${mins}m` : `${mins}m`
+            });
+        }
+
+        return weekData;
+    };
+
+    const getMonthlyData = (): ChartData[] => {
+        const today = new Date();
+        const monthData: ChartData[] = [];
+
+        // Last 4 weeks
+        for (let week = 3; week >= 0; week--) {
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - (week * 7 + 6));
+            const weekEnd = new Date(today);
+            weekEnd.setDate(today.getDate() - (week * 7));
+
+            let totalMinutes = 0;
+            for (let d = new Date(weekStart); d <= weekEnd; d.setDate(d.getDate() + 1)) {
+                const dateStr = d.toISOString().split('T')[0];
+                const record = dailyRecords.find(r => r.date === dateStr);
+                totalMinutes += record?.focusMinutes || 0;
+            }
+
+            const hours = Math.floor(totalMinutes / 60);
+            monthData.push({
+                label: `${4 - week}주전`,
+                value: Math.min(100, (totalMinutes / (480 * 5)) * 100), // Assuming 5 days * 8h
+                time: `${hours}h`
+            });
+        }
+
+        return monthData;
+    };
+
+    const getData = () => {
+        switch (period) {
+            case "daily": return getDailyData();
+            case "weekly": return getWeeklyData();
+            case "monthly": return getMonthlyData();
+            default: return getWeeklyData();
+        }
+    };
+
+    const getStats = () => {
+        const data = getData();
+        const totalMinutes = (() => {
+            const todayStr = new Date().toISOString().split('T')[0];
+            const todayRecord = dailyRecords.find(r => r.date === todayStr);
+
+            // For Daily view, return exact today's minutes
+            if (period === 'daily') return todayRecord?.focusMinutes || 0;
+
+            // For others, sum the chart data (approximation)
+            return data.reduce((sum, d) => {
+                if (d.time.includes('h')) {
+                    const parts = d.time.split('h');
+                    const h = parseInt(parts[0]);
+                    const m = parts[1] ? parseInt(parts[1]) : 0;
+                    return sum + (h * 60) + m;
+                } else {
+                    return sum + parseInt(d.time);
+                }
+            }, 0);
+        })();
+
+        const hours = Math.floor(totalMinutes / 60);
+        const mins = Math.floor(totalMinutes % 60);
+
+        // Avg Rate calculation
+        const avgRate = data.length > 0 ? Math.round(data.reduce((sum, d) => sum + d.value, 0) / data.length) : 0;
+        const activeDays = dailyRecords.length; // Simply count all records for now
+
+        return {
+            totalTime: hours > 0 ? `${hours}h ${mins}m` : `${mins}m`,
+            avgRate: avgRate || 0,
+            streak: `${activeDays}일`,
+            monthlyCoins: userStats.monthlyCoins
+        };
+    };
+
+    const stats = getStats();
+    const currentData = getData();
+
+    // Dynamic Advice Logic
+    const getAdvice = () => {
+        const msgs = [];
+
+        // Level based
+        if (userStats.level <= 3) msgs.push("아직은 새끼 고양이 단계네요! 매일 30분씩 꾸준히 달리면 금방 성장할 거예요.");
+        else if (userStats.level <= 7) msgs.push("치타처럼 빠른 속도로 성장하고 계시군요! 훌륭합니다.");
+        else msgs.push("당신은 진정한 정글의 왕 사자입니다! 이제 집중은 당신의 본능이 되었군요.");
+
+        // Data based
+        const avg = stats.avgRate;
+        if (avg < 30) msgs.push("시작이 반입니다. 하루 딱 1시간만 스마트폰을 멀리하고 타이머를 켜보세요.");
+        else if (avg > 80) msgs.push("놀라운 몰입도입니다! 하지만 번아웃이 오지 않도록 50분 집중 후 10분 휴식은 필수입니다.");
+        else msgs.push("안정적인 페이스를 유지하고 있어요. 가장 중요한 테스크 하나를 오전에 끝내면 하루가 가벼워집니다.");
+
+        // Random pick
+        return msgs[Math.floor(Math.random() * msgs.length)];
+    };
+
+    // Advice is memoized ideally, but for now simple function call (re-renders on state change is fine)
+    const currentAdvice = getAdvice();
+
+    const handleShare = async (type: 'link' | 'sns') => {
+        const shareText = `[Hi-Five Focus] ${period === 'daily' ? '오늘' : '이번 주'} 나의 집중 기록! 🦁\n성취율: ${stats.avgRate}%\n총 집중 시간: ${stats.totalTime}\n함께 몰입해요! 🔥`;
+        const shareUrl = window.location.href;
+
+        if (type === 'sns' && navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'Hi-Five Focus Report',
+                    text: shareText,
+                    url: shareUrl,
+                });
+            } catch (err) {
+                console.log('Share failed', err);
+            }
+        } else {
+            try {
+                await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
+                setToast("✅ 리포트가 클립보드에 복사되었습니다!");
+                setTimeout(() => setToast(null), 3000);
+            } catch (err) {
+                setToast("❌ 복사에 실패했습니다.");
+                setTimeout(() => setToast(null), 3000);
+            }
+        }
+    };
+
+    // Radial chart calculation
+    const radius = 60;
+    const circumference = 2 * Math.PI * radius;
+    const offset = circumference - (stats.avgRate / 100) * circumference;
+
+    return (
+        <main className="report-container">
+            <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2rem" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                    <button
+                        onClick={() => router.push('/')}
+                        style={{
+                            background: "var(--surface-alt)",
+                            border: "1px solid var(--glass-border)",
+                            borderRadius: "12px",
+                            padding: "8px 16px",
+                            fontSize: "0.9rem",
+                            fontWeight: 700,
+                            color: "var(--foreground)",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px"
+                        }}
+                    >
+                        <span>←</span> 홈으로
+                    </button>
+                    <h1 style={{ fontSize: "1.2rem", fontWeight: 800 }}>MY REPORT</h1>
+                </div>
+                <div className="gold-badge" style={{ fontSize: "0.8rem" }}>
+                    Lv.{userStats.level}
+                </div>
+            </header>
+
+            <div className="report-tab-group">
+                <button className={`report-tab ${period === 'daily' ? 'active' : ''}`} onClick={() => setPeriod('daily')}>일간</button>
+                <button className={`report-tab ${period === 'weekly' ? 'active' : ''}`} onClick={() => setPeriod('weekly')}>주간</button>
+                <button className={`report-tab ${period === 'monthly' ? 'active' : ''}`} onClick={() => setPeriod('monthly')}>월간</button>
+            </div>
+
+            {/* Advice Section */}
+            <div className="infographic-card" style={{ background: "rgba(0, 255, 142, 0.05)", borderStyle: "dashed", borderColor: "var(--primary)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
+                    <span className="advice-badge">하이파이브의 조언 💡</span>
+                </div>
+                <p style={{ fontSize: "0.95rem", color: "var(--foreground)", lineHeight: 1.5, fontWeight: 500, wordBreak: "keep-all" }}>
+                    "{currentAdvice}"
+                </p>
+            </div>
+
+            <div className="infographic-card" style={{ textAlign: 'center' }}>
+                <div className="radial-progress-container">
+                    <svg className="radial-progress-svg" width="140" height="140">
+                        <circle className="radial-progress-bg" cx="70" cy="70" r={radius} />
+                        <circle
+                            className="radial-progress-value"
+                            cx="70" cy="70" r={radius}
+                            strokeDasharray={circumference}
+                            strokeDashoffset={offset}
+                        />
+                    </svg>
+                    <div className="radial-center-text">
+                        <div style={{ fontSize: '1.75rem', fontWeight: 800 }}>{stats.avgRate}%</div>
+                        <div style={{ fontSize: '0.65rem', opacity: 0.6 }}>목표 달성률</div>
+                    </div>
+                </div>
+                <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'center', gap: '1.5rem' }}>
+                    <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{stats.totalTime}</div>
+                        <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>총 집중 시간</div>
+                    </div>
+                    <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{stats.streak}</div>
+                        <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>누적 기록일</div>
+                    </div>
+                    <div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>💰 {stats.monthlyCoins.toLocaleString()}</div>
+                        <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>보유 코인</div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="chart-container">
+                <div className="chart-header">
+                    <h3 style={{ margin: 0, fontSize: '1rem' }}>
+                        {period === 'daily' ? "HOURLY FOCUS" :
+                            period === 'weekly' ? "WEEKLY TREND" : "MONTHLY TREND"}
+                    </h3>
+                </div>
+
+                <div className="chart-bars">
+                    {currentData.map((d, i) => (
+                        <div key={i} className="chart-bar-wrapper">
+                            <div
+                                className="chart-bar-fill"
+                                style={{ height: `${d.value}%`, minHeight: '4px' }}
+                            ></div>
+                            <span className="chart-label">{d.label}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="share-group">
+                <button className="share-btn" onClick={() => handleShare('link')}>🔗 링크 복사</button>
+                <button className="share-btn" onClick={() => handleShare('sns')} style={{ background: 'var(--primary)', color: '#000' }}>📤 공유하기</button>
+            </div>
+
+            {toast && <div className="toast-message">{toast}</div>}
+
+            <footer className="report-footer" style={{ marginTop: '3rem', textAlign: 'center', opacity: 0.4, fontSize: '0.7rem' }}>
+                Hi-Five Focus Report System
+            </footer>
+        </main>
+    );
+}
