@@ -26,8 +26,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
-      <body className={outfit.className}>
+    <html lang="ko" suppressHydrationWarning>
+      <body className={outfit.className} suppressHydrationWarning>
         <AuthProvider>
           <div id="main-root">
             {children}

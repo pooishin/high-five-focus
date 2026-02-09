@@ -17,10 +17,7 @@ export default function Login() {
     // Redirect logic
     useEffect(() => {
         if (user) {
-            // 이미 로그인된 상태라면 온보딩 완료 여부 확인
-            const isOnboardingCompleted = localStorage.getItem('onboardingCompleted');
-
-            if (isOnboardingCompleted) {
+            if (user.onboardingCompleted) {
                 router.push('/');
             } else {
                 router.push('/onboarding');
@@ -116,8 +113,9 @@ export default function Login() {
 
                         <button
                             className="btn-auth btn-google"
-                            disabled={true}
-                            style={{ marginBottom: '2.5rem' }}
+                            onClick={handleGoogleSignIn}
+                            disabled={loading}
+                            style={{ marginBottom: '1.2rem' }}
                         >
                             <span style={{ fontSize: '1.2rem' }}>🔐</span>
                             Google로 계속하기
@@ -125,15 +123,16 @@ export default function Login() {
 
                         <button
                             className="btn-auth btn-email"
-                            disabled={true}
+                            onClick={() => setMode('signin')}
+                            disabled={loading}
                             style={{ marginBottom: '2.5rem' }}
                         >
                             ✉️ 이메일로 로그인
                         </button>
 
                         <p style={{ textAlign: 'center', marginTop: '2rem', fontSize: '0.75rem', opacity: 0.6 }}>
-                            💡 게스트 모드는 브라우저에 데이터가 저장됩니다.<br />
-                            Firebase 설정 후 계정 연동이 가능합니다.
+                            💡 게스트 모드는 브라우저에 임시 세션으로 저장됩니다.<br />
+                            Supabase 연동을 통해 모든 기기에서 데이터를 동기화하세요.
                         </p>
                     </div>
                 )}

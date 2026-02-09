@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 
 interface Task {
-  id: number;
+  id: any;
   title: string;
   totalSeconds: number;
   remainingSeconds: number;
@@ -30,6 +31,8 @@ export default function Home() {
   useEffect(() => {
     if (!user) {
       router.push('/login');
+    } else if (!user.onboardingCompleted) {
+      router.push('/onboarding');
     }
   }, [user, router]);
 
@@ -73,19 +76,13 @@ export default function Home() {
         const activeIdx = prevTasks.findIndex(t => t.status === "active");
         if (activeIdx === -1) return prevTasks;
 
-        // Decrement daily energy budget alongside task
         setRemainingEnergySeconds(prev => Math.max(0, prev - 1));
 
         const newTasks = [...prevTasks];
         const activeTask = { ...newTasks[activeIdx] };
 
-        if (activeTask.remainingSeconds > 0) {
-          activeTask.remainingSeconds = Math.max(0, activeTask.remainingSeconds - 1);
-          if (activeTask.remainingSeconds === 0) {
-            activeTask.status = "completed";
-            handleTaskCompletion(activeTask.title);
-          }
-        }
+        // 타임오버 시에도 계속 카운트다운 (음수 허용)
+        activeTask.remainingSeconds = activeTask.remainingSeconds - 1;
 
         newTasks[activeIdx] = activeTask;
         return newTasks;
@@ -95,81 +92,134 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  // Save stats to localStorage whenever they change
+  // Sync Timer with Supabase (Throttled)
   useEffect(() => {
-    localStorage.setItem('userStats', JSON.stringify(stats));
-  }, [stats]);
-
-  // Track daily focus time
+    const activeTask = tasks.find(t => t.status === "active");
+    if (activeTask && user) {
+      // 5초마다 한 번씩만 DB 업데이트 (부하 방지)
+      const syncTimer = setTimeout(async () => {
+        const { error } = await supabase
+          .from('tasks')
+          .update({ remaining_seconds: activeTask.remainingSeconds, status: 'active' })
+          .eq('id', activeTask.id);
+        if (error) console.error('Task sync error:', error);
+      }, 5000);
+      return () => clearTimeout(syncTimer);
+    }
+  }, [tasks, user]);
+  // Browser Tab Utility & Smart Messages
   useEffect(() => {
-    const interval = setInterval(() => {
-      const activeTask = tasks.find(t => t.status === "active");
-      if (activeTask) {
-        const today = new Date().toISOString().split('T')[0];
-        const recordsStr = localStorage.getItem('focusRecords');
-        const records = recordsStr ? JSON.parse(recordsStr) : [];
+    const activeTask = tasks.find(t => t.status === "active");
+    if (activeTask && isFocusMode) {
+      const mins = Math.floor(activeTask.remainingSeconds / 60);
+      const secs = activeTask.remainingSeconds % 60;
+      document.title = `${mins}:${secs < 10 ? '0' : ''}${secs} - Hi-Five Focus`;
+    } else {
+      document.title = "Hi-Five Focus | 5-슬롯 타임박싱";
+    }
+  }, [tasks, isFocusMode]);
 
-        const todayRecord = records.find((r: any) => r.date === today);
-        if (todayRecord) {
-          todayRecord.focusMinutes += 1 / 60; // Add 1 second as fraction of minute
-        } else {
-          records.push({
-            date: today,
-            focusMinutes: 1 / 60,
-            tasksCompleted: 0,
-            coinsEarned: 0
+  const getFocusMessage = () => {
+    const activeTask = tasks.find(t => t.status === "active");
+    if (!activeTask) return "몰입할 과업을 선택하고 ▶ 버튼을 눌러주세요!";
+
+    const ratio = activeTask.remainingSeconds / activeTask.totalSeconds;
+    if (ratio > 0.8) return `🔥 ${activeTask.title}에 몰입을 시작합니다. 지금이 가장 중요해요!`;
+    if (ratio > 0.5) return `⚡️ 안정적인 페이스입니다. 절반이나 왔어요!`;
+    if (ratio > 0.2) return `⚠️ 마감이 얼마 남지 않았어요! 조금만 더 힘내세요.`;
+    if (ratio > 0) return `🚨 마지막 스퍼트! 숨을 고르고 끝까지 몰입하세요.`;
+    return "수고하셨습니다! 하이파이브를 준비하세요. 🤚";
+  };
+
+  // Load Data from Supabase
+  useEffect(() => {
+    if (user) {
+      const loadData = async () => {
+        // Load Profile / Stats
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.uid)
+          .single();
+
+        if (profile) {
+          setStats({
+            exp: profile.exp,
+            level: profile.level,
+            coins: profile.coins,
+            monthlyCoins: 0 // View only
           });
         }
 
-        localStorage.setItem('focusRecords', JSON.stringify(records));
-      }
-    }, 60000); // Every minute
+        // Load Tasks
+        const { data: remoteTasks } = await supabase
+          .from('tasks')
+          .select('*')
+          .eq('user_id', user.uid)
+          .order('position', { ascending: true });
 
-    return () => clearInterval(interval);
-  }, [tasks]);
-
-  const handleTaskCompletion = (title: string) => {
-    const isAllCompleted = tasks.every(t => t.id === -1 || t.status === "completed" || (t.title === title && t.status === "active")); // Logic to check if this completion makes all complete
-    const currentCompletedCount = tasks.filter(t => t.status === "completed").length;
-    const totalRemaining = tasks.length - currentCompletedCount - 1;
-
-    setStats(prev => {
-      const newExp = prev.exp + 50;
-      const newLevel = Math.floor(newExp / 100) + 1;
-      let reward = 10; // Basic task completion
-      if (totalRemaining === 0) reward += 50; // All tasks complete bonus
-
-      const newStats = {
-        exp: newExp,
-        level: newLevel,
-        coins: prev.coins + reward,
-        monthlyCoins: prev.monthlyCoins + reward
+        if (remoteTasks && remoteTasks.length > 0) {
+          setTasks(remoteTasks.map((t: any) => ({
+            id: t.id,
+            title: t.title,
+            totalSeconds: t.total_seconds,
+            remainingSeconds: t.remaining_seconds,
+            status: t.status
+          })));
+          setIsPlanSet(true);
+        }
       };
+      loadData();
+    }
+  }, [user]);
 
-      // Update daily record for task completion
-      const today = new Date().toISOString().split('T')[0];
-      const recordsStr = localStorage.getItem('focusRecords');
-      const records = recordsStr ? JSON.parse(recordsStr) : [];
-      const todayRecord = records.find((r: any) => r.date === today);
+  const handleTaskCompletion = async (title: string) => {
+    const completedTask = tasks.find(t => t.title === title);
+    if (!completedTask) return;
 
-      if (todayRecord) {
-        todayRecord.tasksCompleted += 1;
-        todayRecord.coinsEarned += reward;
-      } else {
-        records.push({
-          date: today,
-          focusMinutes: 0,
-          tasksCompleted: 1,
-          coinsEarned: reward
-        });
-      }
+    const isOvertime = completedTask.remainingSeconds < 0;
+    const isAllCompleted = tasks.every(t => t.id === -1 || t.status === "completed" || (t.title === title && t.status === "active"));
 
-      localStorage.setItem('focusRecords', JSON.stringify(records));
+    // Penalty reward if overtime
+    let reward = isOvertime ? 5 : 10;
+    if (isAllCompleted && !isOvertime) reward += 50;
 
-      return newStats;
+    // Optimistic UI Update
+    setStats(prev => {
+      const newExp = prev.exp + (isOvertime ? 20 : 50);
+      const newLevel = Math.floor(newExp / 100) + 1;
+      return { ...prev, exp: newExp, level: newLevel, coins: prev.coins + reward };
     });
 
-    // Auto-hide overlay after 3 seconds
+    // Supabase Update
+    if (user) {
+      // Update Profile
+      await supabase.rpc('increment_stats', {
+        user_id: user.uid,
+        exp_bonus: 50,
+        coin_bonus: reward
+      });
+
+      // Log Focus
+      await supabase.from('focus_logs').insert([{
+        user_id: user.uid,
+        focus_minutes: 0, // Calculated elsewhere or just event log
+        tasks_completed: 1,
+        coins_earned: reward
+      }]);
+
+      // Update Task Status
+      const completedTask = tasks.find(t => t.title === title);
+      if (completedTask) {
+        await supabase
+          .from('tasks')
+          .update({ status: 'completed', remaining_seconds: 0 })
+          .eq('id', completedTask.id);
+      }
+    }
+
+    setShowCompletion({ visible: true, title });
+
     setTimeout(() => {
       setShowCompletion({ visible: false, title: "" });
     }, 3000);
@@ -181,6 +231,11 @@ export default function Home() {
 
   // Character Evolution mapping
   const getCharEmoji = (level: number) => {
+    const activeTask = tasks.find(t => t.status === "active");
+    const isOvertime = activeTask && activeTask.remainingSeconds < 0;
+
+    if (isOvertime) return "😿";
+
     if (level >= 10) return "🦁"; // Lion (Final)
     if (level >= 6) return "🐆"; // Cheetah
     if (level >= 3) return "🐈"; // Cat
@@ -195,20 +250,21 @@ export default function Home() {
   };
 
   const formatTimeHMS = (secs: number) => {
-    const s_total = Math.max(0, Math.round(secs));
+    const isNegative = secs < 0;
+    const s_total = Math.abs(Math.round(secs));
     const h = Math.floor(s_total / 3600);
     const m = Math.floor((s_total % 3600) / 60);
     const s = s_total % 60;
 
-    // Friendly format: 08h 00m 00s
     const hh = h > 0 ? `${h}h ` : '';
     const mm = m > 0 || h > 0 ? `${m.toString().padStart(2, '0')}m ` : '';
     const ss = `${s.toString().padStart(2, '0')}s`;
 
-    return `${hh}${mm}${ss}`;
+    return `${isNegative ? '-' : ''}${hh}${mm}${ss}`;
   };
 
   const getProgressColor = (remaining: number, total: number) => {
+    if (remaining < 0) return "var(--error)"; // Overtime Status
     const ratio = remaining / total;
     if (ratio > 0.5) return "var(--primary)";
     if (ratio > 0.2) return "var(--warning)";
@@ -216,23 +272,53 @@ export default function Home() {
   };
 
   // Handlers
-  const handleToggleTask = (id: number) => {
+  const handleToggleTask = async (id: number) => {
+    const targetTask = tasks.find(t => t.id === id);
+    if (!targetTask) return;
+
+    const newStatus = targetTask.status === "active" ? "pending" : "active";
+
+    // Optimistic UI Update
     setTasks(prev => prev.map(t => {
       if (t.id === id) {
-        return { ...t, status: t.status === "active" ? "pending" : "active" };
+        return { ...t, status: newStatus };
       }
-      if (t.status === "active") return { ...t, status: "pending" };
+      if (newStatus === "active" && t.status === "active") return { ...t, status: "pending" };
       return t;
     }));
+
+    // Supabase Update
+    if (user) {
+      // 만약 active로 바꾸는 거라면 다른 active들을 pending으로 먼저 바꿈
+      if (newStatus === "active") {
+        await supabase.from('tasks').update({ status: 'pending' }).eq('user_id', user.uid).eq('status', 'active');
+      }
+      await supabase.from('tasks').update({ status: newStatus }).eq('id', id);
+    }
   };
 
-  const moveTask = (idx: number, direction: 'up' | 'down') => {
+  const moveTask = async (idx: number, direction: 'up' | 'down') => {
     const newIdx = direction === 'up' ? idx - 1 : idx + 1;
     if (newIdx < 0 || newIdx >= tasks.length) return;
     const newTasks = [...tasks];
     const [movedTask] = newTasks.splice(idx, 1);
     newTasks.splice(newIdx, 0, movedTask);
+
     setTasks(newTasks);
+
+    // Supabase Update Positions
+    if (user) {
+      const updates = newTasks.map((t, i) => ({
+        id: t.id,
+        user_id: user.uid,
+        title: t.title,
+        total_seconds: t.totalSeconds,
+        remaining_seconds: t.remainingSeconds,
+        status: t.status,
+        position: i
+      }));
+      await supabase.from('tasks').upsert(updates);
+    }
   };
 
   const handlePointerDown = (id: number) => {
@@ -252,14 +338,28 @@ export default function Home() {
     setEditMinutes(task.totalSeconds / 60);
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingTask) return;
     const newTotalSecs = editMinutes * 60;
+
     setTasks(prev => prev.map(t =>
       t.id === editingTask.id
         ? { ...t, title: editTitle, totalSeconds: newTotalSecs, remainingSeconds: newTotalSecs }
         : t
     ));
+
+    // Supabase Update
+    if (user) {
+      await supabase
+        .from('tasks')
+        .update({
+          title: editTitle,
+          total_seconds: newTotalSecs,
+          remaining_seconds: newTotalSecs
+        })
+        .eq('id', editingTask.id);
+    }
+
     setEditingTask(null);
   };
 
@@ -303,21 +403,42 @@ export default function Home() {
           <button
             className="btn-primary btn-start"
             disabled={!isStartEnabled}
-            onClick={() => {
+            onClick={async () => {
               setIsPlanSet(true);
               setRemainingEnergySeconds(totalWorkTime * 60);
-              setStats(prev => ({
-                ...prev,
-                coins: prev.coins + 50,
-                monthlyCoins: prev.monthlyCoins + 50
-              }));
-              // Add coin reward for existing initial tasks
-              const initialTaskReward = tasks.length * 10;
-              setStats(prev => ({
-                ...prev,
-                coins: prev.coins + initialTaskReward,
-                monthlyCoins: prev.monthlyCoins + initialTaskReward
-              }));
+
+              if (user) {
+                // Save Tasks to Supabase
+                const tasksToInsert = tasks.map((t, index) => ({
+                  user_id: user.uid,
+                  title: t.title,
+                  total_seconds: t.totalSeconds,
+                  remaining_seconds: t.totalSeconds, // Reset to total on start
+                  status: 'pending',
+                  position: index
+                }));
+
+                const { error: deleteError } = await supabase.from('tasks').delete().eq('user_id', user.uid);
+                console.log('Inserting tasks to Supabase:', tasksToInsert);
+                const { error: insertError } = await supabase.from('tasks').insert(tasksToInsert);
+
+                if (insertError) {
+                  console.error('Task insert error detail:', insertError.message, insertError.details, insertError.hint);
+                }
+
+                // Initial Rewards
+                const initialReward = 50 + (tasks.length * 10);
+                await supabase.rpc('increment_stats', {
+                  user_id: user.uid,
+                  exp_bonus: 0,
+                  coin_bonus: initialReward
+                });
+
+                setStats(prev => ({
+                  ...prev,
+                  coins: prev.coins + initialReward
+                }));
+              }
             }}
           >
             START
@@ -397,8 +518,17 @@ export default function Home() {
           </div>
 
           {isFocusMode && (
-            <div className="focus-message animate-fade-in">
-              🔥 지금은 몰입 시간입니다! 어떤 과업에 에너지를 쏟으실 건가요?
+            <div className="focus-message animate-fade-in" style={{
+              background: 'rgba(255, 255, 255, 0.05)',
+              padding: '12px 16px',
+              borderRadius: '12px',
+              fontSize: '0.9rem',
+              fontWeight: 600,
+              border: '1px solid var(--glass-border)',
+              marginBottom: '1rem',
+              color: 'var(--primary)'
+            }}>
+              {getFocusMessage()}
             </div>
           )}
 
@@ -410,7 +540,7 @@ export default function Home() {
 
           <div className="dashboard-list" style={{ padding: 0 }}>
             {tasks.map((task, idx) => {
-              const progressRatio = task.remainingSeconds / task.totalSeconds;
+              const elapsedRatio = (task.totalSeconds - task.remainingSeconds) / task.totalSeconds;
               const isActive = task.status === "active";
               const isCompleted = task.status === "completed";
               const isReordering = reorderingTaskId === task.id;
@@ -420,7 +550,12 @@ export default function Home() {
                 <div
                   key={task.id}
                   className={`task-card-horizontal ${isActive ? 'active' : ''} ${isReordering ? 'reorder-mode' : ''} ${isCompleted ? 'completed' : ''}`}
-                  style={{ background: isCompleted ? 'rgba(255,215,0,0.05)' : 'var(--surface-alt)', marginBottom: '0.6rem', border: `1px solid ${isActive || isCompleted ? color : 'var(--glass-border)'}` }}
+                  style={{
+                    '--progress': `${elapsedRatio * 100}%`,
+                    '--progress-color': color,
+                    marginBottom: '0.6rem',
+                    border: `1px solid ${isActive || isCompleted ? color : 'var(--glass-border)'}`
+                  } as any}
                   onPointerDown={() => !isCompleted && handlePointerDown(task.id)}
                   onPointerUp={handlePointerUp}
                   onPointerLeave={handlePointerUp}
@@ -432,12 +567,10 @@ export default function Home() {
                       <span style={{ fontWeight: 700 }}>{isCompleted && "✨ "}{task.title}</span>
                       {isCompleted ? <span className="gold-badge">COMPLETED</span> : <span className="task-time-badge">{formatTimeHM(task.totalSeconds)}</span>}
                     </div>
-                    <div className="progress-bar-container" style={{ height: '6px' }}>
-                      <div className="progress-bar-fill" style={{ width: `${progressRatio * 100}%`, background: color }}></div>
-                    </div>
+
                     {!isReordering && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.4rem' }}>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: isActive ? color : 'inherit' }}>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'inherit' }}>
                           {isCompleted ? '집중 완료!' : `${formatTimeHMS(task.remainingSeconds)} 남음`}
                         </span>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -452,9 +585,16 @@ export default function Home() {
                     )}
                   </div>
                   {!isReordering && !isCompleted && (
-                    <div className="task-controls" style={{ marginLeft: '1rem' }}>
-                      <button className="icon-btn" onClick={(e) => { e.stopPropagation(); handleToggleTask(task.id); }} style={{ background: isActive ? color : 'var(--surface)', color: isActive ? '#000' : 'var(--foreground)' }}>
+                    <div className="task-controls" style={{ marginLeft: '1rem', display: 'flex', gap: '0.6rem' }}>
+                      <button className="icon-btn" onClick={(e) => { e.stopPropagation(); handleToggleTask(task.id); }} style={{ background: isActive ? '#000' : 'var(--surface)', color: isActive ? color : 'var(--foreground)' }}>
                         {isActive ? '⏸' : '▶'}
+                      </button>
+                      <button
+                        className="icon-btn"
+                        onClick={(e) => { e.stopPropagation(); handleTaskCompletion(task.title); }}
+                        style={{ background: 'var(--primary)', color: '#000', fontSize: '1rem' }}
+                      >
+                        ✅
                       </button>
                     </div>
                   )}

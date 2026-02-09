@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
+import Link from "next/link";
 
 interface ChartData {
     label: string;
@@ -17,6 +17,9 @@ interface DailyRecord {
     coinsEarned: number;
 }
 
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+
 interface UserStats {
     exp: number;
     level: number;
@@ -25,6 +28,7 @@ interface UserStats {
 }
 
 export default function Report() {
+    const { user } = useAuth();
     const router = useRouter();
     const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("weekly");
     const [dailyRecords, setDailyRecords] = useState<DailyRecord[]>([]);
@@ -32,18 +36,44 @@ export default function Report() {
     const [toast, setToast] = useState<string | null>(null);
 
     useEffect(() => {
-        // Load data from localStorage
-        const savedRecords = localStorage.getItem('focusRecords');
-        const savedStats = localStorage.getItem('userStats');
+        if (!user) return;
 
-        if (savedRecords) {
-            setDailyRecords(JSON.parse(savedRecords));
-        }
+        const loadReportData = async () => {
+            // Load Stats from profiles
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', user.uid)
+                .single();
 
-        if (savedStats) {
-            setUserStats(JSON.parse(savedStats));
-        }
-    }, []);
+            if (profile) {
+                setUserStats({
+                    exp: profile.exp,
+                    level: profile.level,
+                    coins: profile.coins,
+                    monthlyCoins: profile.coins // Show total as monthly for now or sum logs
+                });
+            }
+
+            // Load Logs from focus_logs
+            const { data: logs } = await supabase
+                .from('focus_logs')
+                .select('*')
+                .eq('user_id', user.uid)
+                .order('date', { ascending: false });
+
+            if (logs) {
+                setDailyRecords(logs.map(l => ({
+                    date: l.date,
+                    focusMinutes: l.focus_minutes,
+                    tasksCompleted: l.tasks_completed,
+                    coinsEarned: l.coins_earned
+                })));
+            }
+        };
+
+        loadReportData();
+    }, [user]);
 
     const getDailyData = (): ChartData[] => {
         // Daily View: Show hypothetical hourly breakdown for 'Today'
@@ -240,8 +270,8 @@ export default function Report() {
         <main className="report-container">
             <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2rem" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                    <button
-                        onClick={() => router.push('/')}
+                    <Link
+                        href="/"
                         style={{
                             background: "var(--surface-alt)",
                             border: "1px solid var(--glass-border)",
@@ -252,11 +282,12 @@ export default function Report() {
                             color: "var(--foreground)",
                             display: "flex",
                             alignItems: "center",
-                            gap: "6px"
+                            gap: "6px",
+                            textDecoration: "none"
                         }}
                     >
                         <span>←</span> 홈으로
-                    </button>
+                    </Link>
                     <h1 style={{ fontSize: "1.2rem", fontWeight: 800 }}>MY REPORT</h1>
                 </div>
                 <div className="gold-badge" style={{ fontSize: "0.8rem" }}>

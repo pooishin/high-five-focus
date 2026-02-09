@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 const onboardingSteps = [
     {
@@ -38,21 +40,21 @@ const onboardingSteps = [
 ];
 
 export default function Onboarding() {
+    const { user, completeOnboarding } = useAuth();
     const [currentStep, setCurrentStep] = useState(0);
     const router = useRouter();
 
-    const handleNext = () => {
+    const handleNext = async () => {
         if (currentStep < onboardingSteps.length - 1) {
             setCurrentStep(currentStep + 1);
         } else {
-            // 온보딩 완료 - 메인 페이지로 이동
-            localStorage.setItem('onboardingCompleted', 'true');
+            await completeOnboarding();
             router.push('/');
         }
     };
 
-    const handleSkip = () => {
-        localStorage.setItem('onboardingCompleted', 'true');
+    const handleSkip = async () => {
+        await completeOnboarding();
         router.push('/');
     };
 

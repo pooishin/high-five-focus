@@ -2,18 +2,8 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import {
-    onAuthStateChanged,
-    signInWithPopup,
-    GoogleAuthProvider,
-    signInWithEmailAndPassword,
-    createUserWithEmailAndPassword,
-    signInAnonymously,
-    signOut,
-    User
-} from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { supabase } from '@/lib/supabase';
+import { User } from '@supabase/supabase-js';
 
 interface SimpleUser {
     uid: string;
@@ -21,6 +11,7 @@ interface SimpleUser {
     displayName: string | null;
     photoURL: string | null;
     isAnonymous: boolean;
+    onboardingCompleted: boolean;
 }
 
 interface AuthContextType {
@@ -31,6 +22,7 @@ interface AuthContextType {
     signUpWithEmail: (email: string, password: string) => Promise<void>;
     signInAsGuest: () => Promise<void>;
     logout: () => Promise<void>;
+    completeOnboarding: () => Promise<void>;
     migrateLocalData: () => Promise<void>;
 }
 
@@ -43,72 +35,103 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
-    // Firebase Auth 상태 감시
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth,
-            async (firebaseUser) => {
-                if (firebaseUser) {
-                    const userData: SimpleUser = {
-                        uid: firebaseUser.uid,
-                        email: firebaseUser.email,
-                        displayName: firebaseUser.displayName || '사용자',
-                        photoURL: firebaseUser.photoURL,
-                        isAnonymous: firebaseUser.isAnonymous
-                    };
-
-                    setUser(userData);
-
-                    // Firestore에 사용자 데이터 저장/업데이트
-                    await syncUserWithFirestore(firebaseUser);
-                } else {
-                    setUser(null);
-                }
+        // 현재 세션 확인
+        const checkUser = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                handleUser(session.user);
+            } else {
                 setLoading(false);
-            },
-            (error) => {
-                console.error('Auth state change error:', error);
-                setLoading(false); // 에러 발생 시에도 로딩 해제하여 UI 렌더링 허용
             }
-        );
+        };
 
-        return () => unsubscribe();
+        checkUser();
+
+        // 인증 상태 감시
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (session?.user) {
+                handleUser(session.user);
+            } else {
+                setUser(null);
+                setLoading(false);
+            }
+        });
+
+        return () => subscription.unsubscribe();
     }, []);
 
-    const syncUserWithFirestore = async (firebaseUser: User) => {
-        try {
-            const userDocRef = doc(db, 'users', firebaseUser.uid);
-            const userDoc = await getDoc(userDocRef);
+    const handleUser = async (supabaseUser: User) => {
+        // DB에서 프로필 정보를 먼저 가져옴
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('onboarding_completed')
+            .eq('id', supabaseUser.id)
+            .single();
 
-            if (!userDoc.exists()) {
-                // 신규 사용자 등록
-                await setDoc(userDocRef, {
-                    uid: firebaseUser.uid,
-                    email: firebaseUser.email,
-                    displayName: firebaseUser.displayName || '사용자',
-                    photoURL: firebaseUser.photoURL,
-                    createdAt: serverTimestamp(),
-                    lastLogin: serverTimestamp(),
-                    isAnonymous: firebaseUser.isAnonymous,
-                    level: 1,
-                    exp: 0,
-                    coins: 0
-                });
-            } else {
-                // 기존 사용자 로그인 시간 업데이트
-                await setDoc(userDocRef, {
-                    lastLogin: serverTimestamp()
-                }, { merge: true });
+        const userData: SimpleUser = {
+            uid: supabaseUser.id,
+            email: supabaseUser.email || null,
+            displayName: supabaseUser.user_metadata?.full_name || '사용자',
+            photoURL: supabaseUser.user_metadata?.avatar_url || null,
+            isAnonymous: supabaseUser.is_anonymous || false,
+            onboardingCompleted: profile?.onboarding_completed || false
+        };
+
+        setUser(userData);
+        await syncUserWithSupabase(supabaseUser);
+        setLoading(false);
+    };
+
+    const syncUserWithSupabase = async (supabaseUser: User) => {
+        try {
+            // profiles 테이블에서 유저 확인
+            const { data: profile, error } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', supabaseUser.id)
+                .single();
+
+            if (error && error.code === 'PGRST116') {
+                // 신규 사용자 등록 (PostgreSQL profiles 테이블)
+                const { error: insertError } = await supabase
+                    .from('profiles')
+                    .insert([{
+                        id: supabaseUser.id,
+                        email: supabaseUser.email,
+                        display_name: supabaseUser.user_metadata?.full_name || '사용자',
+                        photo_url: supabaseUser.user_metadata?.avatar_url || null,
+                        is_anonymous: supabaseUser.is_anonymous || false,
+                        onboarding_completed: false,
+                        level: 1,
+                        exp: 0,
+                        coins: 0,
+                        created_at: new Date().toISOString(),
+                        last_login: new Date().toISOString()
+                    }]);
+
+                if (insertError) console.error('Supabase profile creation error:', insertError);
+            } else if (profile) {
+                // 기존 사용자 마지막 로그인 시간 업데이트
+                await supabase
+                    .from('profiles')
+                    .update({ last_login: new Date().toISOString() })
+                    .eq('id', supabaseUser.id);
             }
         } catch (error) {
-            console.error('Firestore sync error:', error);
+            console.error('Supabase sync error:', error);
         }
     };
 
     const signInWithGoogle = async () => {
         try {
-            const provider = new GoogleAuthProvider();
-            await signInWithPopup(auth, provider);
-            router.push('/');
+            const { error } = await supabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
+                    redirectTo: `${window.location.origin}/auth/callback`
+                }
+            });
+            if (error) throw error;
         } catch (error: any) {
             console.error('Google sign in error:', error);
             throw error;
@@ -117,7 +140,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const signInWithEmail = async (email: string, password: string) => {
         try {
-            await signInWithEmailAndPassword(auth, email, password);
+            const { error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
+            if (error) throw error;
             router.push('/');
         } catch (error: any) {
             console.error('Email sign in error:', error);
@@ -127,7 +154,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const signUpWithEmail = async (email: string, password: string) => {
         try {
-            await createUserWithEmailAndPassword(auth, email, password);
+            const { error } = await supabase.auth.signUp({
+                email,
+                password,
+            });
+            if (error) throw error;
             router.push('/');
         } catch (error: any) {
             console.error('Sign up error:', error);
@@ -137,7 +168,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const signInAsGuest = async () => {
         try {
-            await signInAnonymously(auth);
+            const { error } = await supabase.auth.signInAnonymously();
+            if (error) throw error;
             router.push('/');
         } catch (error: any) {
             console.error('Guest sign in error:', error);
@@ -147,7 +179,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const logout = async () => {
         try {
-            await signOut(auth);
+            const { error } = await supabase.auth.signOut();
+            if (error) throw error;
             router.push('/login');
         } catch (error) {
             console.error('Logout error:', error);
@@ -155,8 +188,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
     };
 
+    const completeOnboarding = async () => {
+        if (!user) return;
+
+        try {
+            // update 대신 upsert를 사용하여 레코드가 없더라도 생성하며 업데이트하도록 강화
+            const { error } = await supabase
+                .from('profiles')
+                .upsert({
+                    id: user.uid,
+                    onboarding_completed: true,
+                    last_login: new Date().toISOString()
+                });
+
+            if (error) {
+                console.error('Supabase Onboarding Update Error:', error.message, error.details, error.hint);
+                throw error;
+            }
+
+            // 로컬 상태 업데이트
+            setUser(prev => prev ? { ...prev, onboardingCompleted: true } : null);
+            localStorage.setItem('onboardingCompleted', 'true');
+        } catch (error: any) {
+            console.error('Error completing onboarding:', error);
+            throw error;
+        }
+    };
+
     const migrateLocalData = async () => {
-        // 추후 localStorage의 데이터를 Firestore로 옮기는 로직 구현 가능
         console.log('Migrating local data to cloud...');
     };
 
@@ -168,6 +227,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUpWithEmail,
         signInAsGuest,
         logout,
+        completeOnboarding,
         migrateLocalData
     };
 
