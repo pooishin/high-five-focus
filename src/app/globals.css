@@ -859,48 +859,39 @@ button:active {
   box-shadow: 0 6px 25px rgba(0, 255, 142, 0.4);
 }
 
-/* Google 버튼 (비활성화) */
+/* Google 버튼 */
 .btn-google {
-  background: var(--surface-alt);
-  color: var(--foreground-muted);
-  border-color: var(--glass-border);
-  opacity: 0.5;
-  cursor: not-allowed;
+  background: #FFF;
+  color: #000;
   position: relative;
+  transition: all 0.2s;
 }
 
-.btn-google::after {
-  content: '🔒 Firebase 설정 필요';
-  position: absolute;
-  bottom: -24px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.65rem;
-  color: var(--foreground-muted);
-  opacity: 0.6;
-  white-space: nowrap;
+.btn-google:hover {
+  background: #F0F0F0;
+  transform: translateY(-2px);
 }
 
-/* 이메일 로그인 버튼 (비활성화) */
+.btn-google:active {
+  transform: translateY(0);
+}
+
+/* 이메일 로그인 버튼 */
 .btn-email {
-  background: var(--surface-alt);
-  color: var(--foreground-muted);
-  border-color: var(--glass-border);
-  opacity: 0.5;
-  cursor: not-allowed;
+  background: rgba(255, 255, 255, 0.08);
+  color: #FFF;
+  border-color: rgba(255, 255, 255, 0.1);
   position: relative;
+  transition: all 0.2s;
 }
 
-.btn-email::after {
-  content: '🔒 Firebase 설정 필요';
-  position: absolute;
-  bottom: -24px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.65rem;
-  color: var(--foreground-muted);
-  opacity: 0.6;
-  white-space: nowrap;
+.btn-email:hover {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-2px);
+}
+
+.btn-email:active {
+  transform: translateY(0);
 }
 
 /* 구분선 */

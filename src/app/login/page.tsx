@@ -12,6 +12,7 @@ export default function Login() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [successMsg, setSuccessMsg] = useState('');
     const [loading, setLoading] = useState(false);
 
     // Redirect logic
@@ -41,10 +42,13 @@ export default function Login() {
         e.preventDefault();
         setLoading(true);
         setError('');
+        setSuccessMsg('');
 
         try {
             if (mode === 'signup') {
                 await signUpWithEmail(email, password);
+                setSuccessMsg('가입이 성공했습니다! 이메일 인증 후 로그인해주세요. (테스트 환경에서는 즉시 로그인 시도 가능)');
+                setPassword('');
             } else {
                 await signInWithEmail(email, password);
             }
@@ -176,6 +180,12 @@ export default function Login() {
                             {error && (
                                 <div className="error-message" style={{ fontSize: '0.85rem', color: '#ff6b6b', background: 'rgba(255, 82, 82, 0.1)', padding: '0.8rem', borderRadius: '8px', textAlign: 'center' }}>
                                     ⚠️ {error}
+                                </div>
+                            )}
+
+                            {successMsg && (
+                                <div className="success-message" style={{ fontSize: '0.85rem', color: 'var(--primary)', background: 'rgba(0, 255, 142, 0.1)', padding: '0.8rem', borderRadius: '8px', textAlign: 'center', lineHeight: 1.4 }}>
+                                    ✅ {successMsg}
                                 </div>
                             )}
 
