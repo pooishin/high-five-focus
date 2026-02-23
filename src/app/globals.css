@@ -31,20 +31,26 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-html,
-body {
-  height: 100%;
+html {
+  min-height: 100%;
   background: var(--background);
   color: var(--foreground);
   font-feature-settings: "ss01", "ss02", "cv01", "cv02";
   scroll-behavior: smooth;
+  overscroll-behavior: none;
+  /* 상단 당겨서 새로고침 방지 */
 }
 
 body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  overflow-x: hidden;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  height: auto !important;
+  min-height: 100%;
+  overscroll-behavior: none;
+  /* 바운스 효과 방지 */
 }
 
 #main-root {

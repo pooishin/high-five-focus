@@ -312,7 +312,7 @@ export default function Home() {
   return (
     <main
       className="home-container"
-      style={{ position: 'relative', overflow: 'hidden', minHeight: '100vh', touchAction: 'pan-y' }}
+      style={{ position: 'relative', minHeight: '100vh', touchAction: 'pan-y', paddingTop: 'calc(env(safe-area-inset-top, 0px) + 1.4rem)', paddingBottom: '3rem' }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -328,7 +328,7 @@ export default function Home() {
       )}
 
       {/* Header */}
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', padding: '0 0.5rem' }}>
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', padding: '0 0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <button onClick={() => router.push('/plan')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}>
             <Image src="/assets/images/logo.svg" width={28} height={28} alt="Settings" />
@@ -346,25 +346,25 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="rainbow-container animate-fade-in">
-        <div className="rainbow-inner">
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.75rem' }}>
+      <div className="rainbow-container animate-fade-in" style={{ margin: '0.5rem' }}>
+        <div className="rainbow-inner" style={{ padding: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
             <Link href="/report" className="btn-report">REPORT 📊</Link>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
             <span style={{ fontSize: '0.85rem', fontWeight: 600, opacity: 0.7 }}>오늘의 가용 에너지</span>
             <span className={isFocusMode ? "rainbow-text" : ""} style={{ fontSize: '1.1rem', fontWeight: 800, color: isFocusMode ? 'transparent' : 'var(--primary)' }}>
               {formatTimeHMS(remainingEnergySeconds)}
             </span>
           </div>
 
-          {isFocusMode && <div className="focus-message animate-fade-in" style={{ background: 'rgba(255,255,255,0.05)', padding: '12px 16px', borderRadius: '12px', fontSize: '0.9rem', fontWeight: 600, border: '1px solid var(--glass-border)', marginBottom: '1rem', color: 'var(--primary)' }}>{getFocusMessage()}</div>}
+          {isFocusMode && <div className="focus-message animate-fade-in" style={{ background: 'rgba(255,255,255,0.05)', padding: '10px 14px', borderRadius: '12px', fontSize: '0.85rem', fontWeight: 600, border: '1px solid var(--glass-border)', marginBottom: '0.75rem', color: 'var(--primary)' }}>{getFocusMessage()}</div>}
 
           <div className="dashboard-list" style={{ padding: 0 }}>
             {tasks.length === 0 && (
-              <div style={{ padding: '2rem 1rem', textAlign: 'center', opacity: 0.8, marginBottom: '1rem', border: '1px dashed var(--glass-border)', borderRadius: '12px', background: 'rgba(0,0,0,0.2)' }}>
-                <p style={{ marginBottom: '0.5rem', fontSize: '1rem', fontWeight: 700, color: 'var(--primary)' }}>오늘의 계획을 세워보세요! 📝</p>
-                <p style={{ fontSize: '0.8rem', opacity: 0.7 }}>빈 슬롯을 눌러 할 일을 추가할 수 있습니다.</p>
+              <div style={{ padding: '1.25rem 1rem', textAlign: 'center', opacity: 0.8, marginBottom: '0.75rem', border: '1px dashed var(--glass-border)', borderRadius: '12px', background: 'rgba(0,0,0,0.2)' }}>
+                <p style={{ marginBottom: '0.25rem', fontSize: '0.95rem', fontWeight: 700, color: 'var(--primary)' }}>오늘의 계획을 세워보세요! 📝</p>
+                <p style={{ fontSize: '0.75rem', opacity: 0.7 }}>빈 슬롯을 눌러 할 일을 추가할 수 있습니다.</p>
               </div>
             )}
             {tasks.map((task, idx) => {
@@ -374,7 +374,7 @@ export default function Home() {
               const color = isCompleted ? '#FFD700' : getProgressColor(task.remainingSeconds, task.totalSeconds);
 
               return (
-                <div key={task.id} className={`task-card-horizontal ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`} style={{ marginBottom: '0.6rem', border: `1px solid ${isActive || isCompleted ? color : 'var(--glass-border)'}`, position: 'relative', overflow: 'hidden' } as any} onPointerDown={() => !isCompleted && handlePointerDown(task.id)} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp} onClick={() => !isCompleted && !reorderingTaskId && handleEditClick(task)}>
+                <div key={task.id} className={`task-card-horizontal ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`} style={{ marginBottom: '0.5rem', border: `1px solid ${isActive || isCompleted ? color : 'var(--glass-border)'}`, position: 'relative', overflow: 'hidden' } as any} onPointerDown={() => !isCompleted && handlePointerDown(task.id)} onPointerUp={handlePointerUp} onPointerLeave={handlePointerUp} onClick={() => !isCompleted && !reorderingTaskId && handleEditClick(task)}>
                   {/* 진행 바 배경 */}
                   {!isCompleted && (
                     <div style={{
@@ -426,25 +426,25 @@ export default function Home() {
                 className="task-card-horizontal empty-slot"
                 onClick={handleAddNewTask}
                 style={{
-                  marginBottom: '0.6rem',
+                  marginBottom: '0.5rem',
                   border: '1px dashed rgba(255,255,255,0.1)',
                   opacity: 0.6,
                   display: 'flex',
                   justifyContent: 'center',
                   alignItems: 'center',
-                  height: '76px',
+                  height: '64px',
                   cursor: 'pointer',
                   borderRadius: '16px',
                   background: 'rgba(255,255,255,0.02)',
                   transition: 'all 0.2s ease'
                 }}
               >
-                <span style={{ fontSize: '1rem', color: 'var(--primary)', fontWeight: 600 }}>+ 할 일 추가</span>
+                <span style={{ fontSize: '0.9rem', color: 'var(--primary)', fontWeight: 600 }}>+ 할 일 추가</span>
               </div>
             ))}
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', padding: '0 10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', padding: '0 10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '6px 14px', borderRadius: '100px', fontSize: '0.9rem' }}>💰 <b>{stats.coins}</b></div>
             <div className="avatar-floating-mini" style={{ width: '45px', height: '45px', background: 'rgba(255,255,255,0.05)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', border: '1px solid var(--primary)' }}>{getCharEmoji(stats.level)}</div>
           </div>
