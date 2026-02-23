@@ -43,6 +43,16 @@ export default function RootLayout({
             {children}
           </div>
         </AuthProvider>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (window.matchMedia('(display-mode: standalone)').matches) {
+                // PWA가 독립 창으로 실행될 때 모바일 사이즈로 조정 시도
+                window.resizeTo(430, 850);
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );

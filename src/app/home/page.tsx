@@ -68,14 +68,24 @@ export default function Home() {
     }
   }, [user]);
 
-  // 사운드 재생 함수
-  const playClapSound = (type: 'short' | 'long') => {
+  // 사운드 및 진동 재생 함수
+  const playFeedback = (type: 'short' | 'long') => {
+    // 사운드
     try {
       const audio = new Audio(type === 'short' ? '/assets/sounds/clapping.mp3' : '/assets/sounds/clapping_long.mp3');
       audio.volume = 0.7;
       audio.play().catch(e => console.log('Audio play failed (interaction required):', e));
     } catch (e) {
       console.error('Audio setup failed:', e);
+    }
+
+    // 진동 (Haptic)
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      if (type === 'short') {
+        navigator.vibrate(200); // 200ms 진동
+      } else {
+        navigator.vibrate([100, 50, 100, 50, 300]); // 패턴 진동
+      }
     }
   };
 
@@ -90,9 +100,9 @@ export default function Home() {
         const newTasks = [...prevTasks];
         const nextSeconds = newTasks[activeIdx].remainingSeconds - 1;
 
-        // 0초 도달 시 알림 및 사운드 (한 번만 실행되도록 0일 때만)
+        // 0초 도달 시 알림 및 피드백 (한 번만 실행되도록 0일 때만)
         if (nextSeconds === 0) {
-          playClapSound('short');
+          playFeedback('short');
           if (Notification.permission === 'granted') {
             new Notification("테스크 완료! 👏", {
               body: `${newTasks[activeIdx].title} 끝! 고생하셨습니다.`,
@@ -138,9 +148,9 @@ export default function Home() {
     // 모든 테스크 완료 체크
     const pendingTasks = tasks.filter(t => t.id !== completedTask.id && t.status !== 'completed');
     if (pendingTasks.length === 0) {
-      playClapSound('long');
+      playFeedback('long');
     } else {
-      playClapSound('short');
+      playFeedback('short');
     }
 
     setStats(prev => {
@@ -181,7 +191,7 @@ export default function Home() {
       if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
         Notification.requestPermission();
       }
-      playClapSound('short');
+      playFeedback('short');
     }
     setIsFocusMode(nextState);
   };
