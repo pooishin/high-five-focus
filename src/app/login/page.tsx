@@ -145,7 +145,10 @@ export default function Login() {
                                 <input
                                     type="email"
                                     value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
+                                    onChange={(e) => {
+                                        setEmail(e.target.value);
+                                        if (error) setError('');
+                                    }}
                                     placeholder="your@email.com"
                                     required
                                     className="auth-input"
@@ -158,7 +161,10 @@ export default function Login() {
                                 <input
                                     type="password"
                                     value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
+                                    onChange={(e) => {
+                                        setPassword(e.target.value);
+                                        if (error) setError('');
+                                    }}
                                     placeholder="••••••••"
                                     required
                                     minLength={6}
