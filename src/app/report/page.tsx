@@ -105,27 +105,23 @@ export default function Report() {
 
     const getDailyData = (): ChartData[] => {
         // Daily View: Show hypothetical hourly breakdown for 'Today'
-        // Since we don't track hourly data yet, we distribute today's total minutes across working hours.
         const todayStr = new Date().toISOString().split('T')[0];
         const todayRecord = dailyRecords.find(r => r.date === todayStr);
         const totalMinutes = todayRecord?.focusMinutes || 0;
 
-        const workingHours = [9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20];
+        // 차트에 최근 6시간 분량을 렌더링하도록 동적 구성
+        const currentHour = new Date().getHours();
+        const startHour = Math.max(0, currentHour - 5);
+        const workingHours = Array.from({ length: 6 }, (_, i) => startHour + i);
+
         const data: ChartData[] = [];
 
-        // Simple distribution simulation based on total minutes
-        // This is a visual approximation for MVP
-        let remaining = totalMinutes;
-
         workingHours.forEach(hour => {
-            // Random-ish distribution focused around morning/afternoon peaks
+            // 현재는 focus_logs 에 시간별 세션 데이터가 없으므로, 
+            // 당일 얻어낸 모든 총 집중 시간을 '현재 시간(currentHour)' 슬롯에 표시하여 즉각적인 달성감을 줌.
             let minutes = 0;
-            if (remaining > 0) {
-                const maxForHour = 45; // Max 45 mins per hour focus
-                const randomFactor = Math.random();
-                minutes = Math.min(remaining, Math.floor(maxForHour * randomFactor));
-                if (hour === 20) minutes = remaining; // Dump rest in last slot
-                remaining -= minutes;
+            if (hour === currentHour) {
+                minutes = totalMinutes;
             }
 
             data.push({
