@@ -83,13 +83,8 @@ export default function Login() {
             <div className="login-card animate-fade-in" style={{ margin: '0 auto', maxWidth: '400px', width: '100%', padding: '2rem 1.5rem', flexShrink: 0 }}>
                 {/* Logo & Title */}
                 <header style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-                    <div style={{ marginBottom: '0.75rem', display: 'flex', justifyContent: 'center' }}>
-                        <Image
-                            src="/assets/images/logo.svg"
-                            width={64}
-                            height={64}
-                            alt="Hi-Five Focus Logo"
-                        />
+                    <div style={{ marginBottom: '0.75rem', display: 'flex', justifyContent: 'center', fontSize: '3.5rem' }}>
+                        👋
                     </div>
                     <h1 style={{ fontSize: '1.75rem', fontWeight: 900, marginBottom: '0.25rem' }}>
                         Hi-Five Focus
@@ -107,10 +102,15 @@ export default function Login() {
                             className="btn-primary btn-large"
                             onClick={handleGuestSignIn}
                             disabled={loading}
-                            style={{ width: '100%', marginBottom: '1rem', padding: '0.9rem', fontSize: '1rem', fontWeight: 700 }}
+                            style={{ width: '100%', marginBottom: '0.5rem', padding: '0.9rem', fontSize: '1rem', fontWeight: 700 }}
                         >
                             {loading ? '로딩 중...' : '🚀 게스트로 시작하기'}
                         </button>
+
+                        <p style={{ textAlign: 'center', fontSize: '0.75rem', opacity: 0.6, marginBottom: '1.5rem', lineHeight: 1.4, color: 'var(--primary)' }}>
+                            * 별도의 가입 없이 즉시 서비스를 체험할 수 있습니다.<br />
+                            (단, 브라우저 쿠키 삭제 시 데이터가 초기화될 수 있습니다.)
+                        </p>
 
                         <div className="divider" style={{ margin: '1.5rem 0' }}>
                             <span style={{ background: 'var(--surface)', padding: '0 10px', fontSize: '0.8rem', opacity: 0.5 }}>또는</span>
@@ -123,22 +123,21 @@ export default function Login() {
                             style={{ width: '100%', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', padding: '0.8rem', borderRadius: '12px', background: '#FFF', color: '#000', border: 'none', fontWeight: 600, fontSize: '0.95rem' }}
                         >
                             <span style={{ fontSize: '1.2rem' }}>🔐</span>
-                            Google로 계속하기
+                            구글로그인
                         </button>
 
                         <button
                             className="btn-auth btn-email"
                             onClick={() => setMode('signin')}
                             disabled={loading}
-                            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', padding: '0.8rem', borderRadius: '12px', background: 'rgba(255,255,255,0.08)', color: '#FFF', border: '1px solid rgba(255,255,255,0.1)', fontSize: '0.9rem' }}
+                            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', padding: '0.8rem', borderRadius: '12px', background: 'rgba(255,255,255,0.15)', color: '#FFF', border: '1px solid rgba(255,255,255,0.2)', fontSize: '0.9rem', fontWeight: 600 }}
                         >
                             <span style={{ fontSize: '1.1rem' }}>✉️</span>
                             이메일로 로그인
                         </button>
 
-                        <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.75rem', opacity: 0.5, lineHeight: 1.5 }}>
-                            💡 게스트 모드는 기기에 임시 저장됩니다.<br />
-                            로그인하여 데이터를 영구 보관하세요.
+                        <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.75rem', opacity: 0.4, lineHeight: 1.5 }}>
+                            💡 로그인하여 데이터를 안전하게 영구 보관하세요.
                         </p>
                     </div>
                 ) : (mode === 'signin' || mode === 'signup') && (
@@ -238,19 +237,26 @@ export default function Login() {
             </div>
 
             {/* Features Section */}
-            <div className="features-grid" style={{ marginTop: '2rem', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '0.8rem', paddingBottom: '2rem' }}>
-                <div className="feature-card" style={{ padding: '0.8rem 1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '1rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <div style={{ fontSize: '1.5rem' }}>⚡</div>
+            <div className="features-grid" style={{ marginTop: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', paddingBottom: '3rem', width: '100%', maxWidth: '400px', margin: '2.5rem auto 0 auto' }}>
+                <div className="feature-card" style={{ padding: '1.2rem', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '1.2rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ fontSize: '2rem', filter: 'drop-shadow(0 0 10px rgba(0, 255, 142, 0.3))' }}>⚡</div>
                     <div>
-                        <h3 style={{ fontSize: '0.9rem', marginBottom: '0.2rem', fontWeight: 700 }}>5-슬롯 집중</h3>
-                        <p style={{ fontSize: '0.75rem', opacity: 0.6, margin: 0 }}>하루 5개의 핵심 과업만 선택</p>
+                        <h3 style={{ fontSize: '1rem', marginBottom: '0.3rem', fontWeight: 700, color: 'var(--primary)' }}>5-슬롯 집중 시스템</h3>
+                        <p style={{ fontSize: '0.8rem', opacity: 0.7, margin: 0, lineHeight: 1.4 }}>하루 5개의 핵심 과업에만 집중하여<br />마감 효과와 생산성을 극대화합니다.</p>
                     </div>
                 </div>
-                <div className="feature-card" style={{ padding: '0.8rem 1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '1rem', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <div style={{ fontSize: '1.5rem' }}>🎮</div>
+                <div className="feature-card" style={{ padding: '1.2rem', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '1.2rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ fontSize: '2rem', filter: 'drop-shadow(0 0 10px rgba(255, 215, 0, 0.3))' }}>🎮</div>
                     <div>
-                        <h3 style={{ fontSize: '0.9rem', marginBottom: '0.2rem' }}>게이미피케이션</h3>
-                        <p style={{ fontSize: '0.75rem', opacity: 0.6, margin: 0 }}>레벨업하고 코인을 획득하세요</p>
+                        <h3 style={{ fontSize: '1rem', marginBottom: '0.3rem', fontWeight: 700, color: '#FFD700' }}>강력한 동기부여</h3>
+                        <p style={{ fontSize: '0.8rem', opacity: 0.7, margin: 0, lineHeight: 1.4 }}>집중 시간만큼 아바타가 성장하고<br />코인을 모아 슬롯을 확장하세요.</p>
+                    </div>
+                </div>
+                <div className="feature-card" style={{ padding: '1.2rem', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '1.2rem', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <div style={{ fontSize: '2rem', filter: 'drop-shadow(0 0 10px rgba(0, 122, 255, 0.3))' }}>📊</div>
+                    <div>
+                        <h3 style={{ fontSize: '1rem', marginBottom: '0.3rem', fontWeight: 700, color: '#007AFF' }}>스마트 데이터 리포트</h3>
+                        <p style={{ fontSize: '0.8rem', opacity: 0.7, margin: 0, lineHeight: 1.4 }}>나의 집중 패턴을 시각화하고<br />맞춤형 AI 조언을 받아보세요.</p>
                     </div>
                 </div>
             </div>
