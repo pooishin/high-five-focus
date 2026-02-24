@@ -202,37 +202,43 @@ export default function Report() {
     };
 
     const getStats = () => {
-        const data = getData();
-        const totalMinutes = (() => {
-            const todayStr = new Date().toISOString().split('T')[0];
-            const todayRecord = dailyRecords.find(r => r.date === todayStr);
+        let totalMinutes = 0;
+        let targetMinutes = 60; // 일간 목표 60분 (1시간 기준)
+        const todayStr = new Date().toISOString().split('T')[0];
 
-            // For Daily view, return exact today's minutes
-            if (period === 'daily') return todayRecord?.focusMinutes || 0;
-
-            // For others, sum the chart data (approximation)
-            return data.reduce((sum, d) => {
-                if (d.time.includes('h')) {
-                    const parts = d.time.split('h');
-                    const h = parseInt(parts[0]);
-                    const m = parts[1] ? parseInt(parts[1]) : 0;
-                    return sum + (h * 60) + m;
-                } else {
-                    return sum + parseInt(d.time);
-                }
-            }, 0);
-        })();
+        if (period === 'daily') {
+            totalMinutes = dailyRecords.find(r => r.date === todayStr)?.focusMinutes || 0;
+            targetMinutes = 60;
+        } else if (period === 'weekly') {
+            const today = new Date();
+            for (let i = 6; i >= 0; i--) {
+                let d = new Date(today);
+                d.setDate(d.getDate() - i);
+                let dateStr = d.toISOString().split('T')[0];
+                totalMinutes += dailyRecords.find(r => r.date === dateStr)?.focusMinutes || 0;
+            }
+            targetMinutes = 60 * 7;
+        } else { // monthly
+            const today = new Date();
+            for (let i = 29; i >= 0; i--) {
+                let d = new Date(today);
+                d.setDate(d.getDate() - i);
+                let dateStr = d.toISOString().split('T')[0];
+                totalMinutes += dailyRecords.find(r => r.date === dateStr)?.focusMinutes || 0;
+            }
+            targetMinutes = 60 * 30;
+        }
 
         const hours = Math.floor(totalMinutes / 60);
         const mins = Math.floor(totalMinutes % 60);
 
-        // Avg Rate calculation
-        const avgRate = data.length > 0 ? Math.round(data.reduce((sum, d) => sum + d.value, 0) / data.length) : 0;
-        const activeDays = dailyRecords.length; // Simply count all records for now
+        // 목표 달성률 계산 (최대 100%)
+        const avgRate = Math.min(100, Math.round((totalMinutes / targetMinutes) * 100));
+        const activeDays = dailyRecords.length; // 향후 연속 출석일수로 고도화 가능
 
         return {
             totalTime: hours > 0 ? `${hours}h ${mins}m` : `${mins}m`,
-            avgRate: avgRate || 0,
+            avgRate,
             streak: `${activeDays}일`,
             monthlyCoins: userStats.monthlyCoins
         };
