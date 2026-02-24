@@ -161,6 +161,36 @@ export default function Home() {
     if (user) {
       await supabase.rpc('increment_stats', { user_id: user.uid, exp_bonus: 50, coin_bonus: reward });
       await supabase.from('tasks').update({ status: 'completed', remaining_seconds: 0 }).eq('id', completedTask.id);
+
+      try {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const focusMinutes = Math.ceil(completedTask.totalSeconds / 60);
+
+        const { data: existingLog } = await supabase
+          .from('focus_logs')
+          .select('*')
+          .eq('user_id', user.uid)
+          .eq('date', todayStr)
+          .single();
+
+        if (existingLog) {
+          await supabase.from('focus_logs').update({
+            focus_minutes: existingLog.focus_minutes + focusMinutes,
+            tasks_completed: existingLog.tasks_completed + 1,
+            coins_earned: existingLog.coins_earned + reward
+          }).eq('id', existingLog.id);
+        } else {
+          await supabase.from('focus_logs').insert([{
+            user_id: user.uid,
+            date: todayStr,
+            focus_minutes: focusMinutes,
+            tasks_completed: 1,
+            coins_earned: reward
+          }]);
+        }
+      } catch (err) {
+        console.error("Failed to update focus logs:", err);
+      }
     }
     setShowCompletion({ visible: true, title });
     setTimeout(() => setShowCompletion({ visible: false, title: "" }), 3000);
