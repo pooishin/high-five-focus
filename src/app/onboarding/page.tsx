@@ -26,7 +26,7 @@ const onboardingSteps = [
         highlight: 'Traffic Light UX (초록/노랑/빨강)'
     },
     {
-        icon: '💰',
+        icon: '🪙✋',
         title: '코인을 모아 보상을 받으세요',
         description: '과업을 완료할 때마다 코인과 경험치를 획득합니다. 레벨업하고 아바타를 성장시키세요!',
         highlight: '하루 최대 200코인 획득 가능'
@@ -82,13 +82,8 @@ export default function Onboarding() {
             {/* Content */}
             <div className="onboarding-content animate-fade-in" key={currentStep}>
                 {/* Logo */}
-                <div className="onboarding-logo">
-                    <Image
-                        src="/assets/images/logo.svg"
-                        width={60}
-                        height={60}
-                        alt="Hi-Five Focus Logo"
-                    />
+                <div className="onboarding-logo" style={{ fontSize: '4rem', marginBottom: '1rem', display: 'flex', justifyContent: 'center' }}>
+                    👋
                 </div>
 
                 {/* Icon */}

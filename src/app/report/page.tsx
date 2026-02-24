@@ -368,7 +368,7 @@ export default function Report() {
                         <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>누적 기록일</div>
                     </div>
                     <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>💰 {stats.monthlyCoins.toLocaleString()}</div>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>🪙✋ {stats.monthlyCoins.toLocaleString()}</div>
                         <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>보유 코인</div>
                     </div>
                 </div>

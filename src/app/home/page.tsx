@@ -44,6 +44,32 @@ export default function Home() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editMinutes, setEditMinutes] = useState(0);
+  const [maxSlots, setMaxSlots] = useState(5);
+
+  useEffect(() => {
+    if (user) {
+      const saved = localStorage.getItem(`maxSlots_${user.uid}`);
+      if (saved) setMaxSlots(parseInt(saved, 10));
+    }
+  }, [user]);
+
+  const handleAddSlot = async () => {
+    if (stats.coins >= 1000) {
+      if (confirm("손바닥 코인 1000개를 사용하여 할 일 슬롯 1개를 추가하시겠습니까? (영구 적용)")) {
+        const newMax = maxSlots + 1;
+        setMaxSlots(newMax);
+        if (user) localStorage.setItem(`maxSlots_${user.uid}`, newMax.toString());
+
+        const newCoins = stats.coins - 1000;
+        setStats(p => ({ ...p, coins: newCoins }));
+        if (user) {
+          await supabase.from('profiles').update({ coins: newCoins }).eq('id', user.uid);
+        }
+      }
+    } else {
+      alert("코인이 부족합니다! (필요 코인: 1000개)");
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -101,14 +127,18 @@ export default function Home() {
         const nextSeconds = newTasks[activeIdx].remainingSeconds - 1;
 
         // 0초 도달 시 알림 및 피드백 (한 번만 실행되도록 0일 때만)
-        if (nextSeconds === 0) {
-          playFeedback('short');
-          if (Notification.permission === 'granted') {
-            new Notification("테스크 완료! 👏", {
-              body: `${newTasks[activeIdx].title} 끝! 고생하셨습니다.`,
-              icon: '/assets/images/logo.svg'
-            });
+        if (nextSeconds <= 0) {
+          if (nextSeconds === 0) {
+            playFeedback('short');
+            if (Notification.permission === 'granted') {
+              new Notification("테스크 완료! 👏", {
+                body: `${newTasks[activeIdx].title} 끝! 고생하셨습니다.`,
+                icon: '/assets/images/logo.svg'
+              });
+            }
           }
+          newTasks[activeIdx] = { ...newTasks[activeIdx], remainingSeconds: 0, status: 'pending' };
+          return newTasks;
         }
 
         newTasks[activeIdx] = { ...newTasks[activeIdx], remainingSeconds: nextSeconds };
@@ -371,7 +401,7 @@ export default function Home() {
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', padding: '0 0.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <button onClick={() => router.push('/plan')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}>
-            <Image src="/assets/images/logo.svg" width={28} height={28} alt="Settings" />
+            <span style={{ fontSize: '1.8rem', marginRight: '4px' }}>👋</span>
           </button>
           <h2 style={{ fontSize: '1.1rem', fontWeight: 900 }}>Hi-Five Focus</h2>
         </div>
@@ -443,8 +473,9 @@ export default function Home() {
                   </div>
                   {!reorderingTaskId && !isCompleted && (
                     <div className="task-controls" style={{ marginLeft: '1rem', display: 'flex', gap: '0.6rem', position: 'relative', zIndex: 1 }}>
-                      <button className="icon-btn" onClick={(e) => { e.stopPropagation(); handleToggleTask(task.id); }} style={{ background: isActive ? '#000' : 'var(--surface)', color: isActive ? color : 'var(--foreground)' }}>{isActive ? '⏸' : '▶'}</button>
-                      {task.remainingSeconds <= 0 && (
+                      {task.remainingSeconds > 0 ? (
+                        <button className="icon-btn" onClick={(e) => { e.stopPropagation(); handleToggleTask(task.id); }} style={{ background: isActive ? '#000' : 'var(--surface)', color: isActive ? color : 'var(--foreground)' }}>{isActive ? '⏸' : '▶'}</button>
+                      ) : (
                         <button className="icon-btn" onClick={(e) => { e.stopPropagation(); handleTaskCompletion(task.title); }} style={{ background: 'var(--primary)', color: '#000' }}>✅</button>
                       )}
                     </div>
@@ -460,7 +491,7 @@ export default function Home() {
               );
             })}
 
-            {Array.from({ length: Math.max(0, 5 - tasks.length) }).map((_, idx) => (
+            {Array.from({ length: Math.max(0, maxSlots - tasks.length) }).map((_, idx) => (
               <div
                 key={`empty-${idx}`}
                 className="task-card-horizontal empty-slot"
@@ -482,10 +513,14 @@ export default function Home() {
                 <span style={{ fontSize: '0.9rem', color: 'var(--primary)', fontWeight: 600 }}>+ 할 일 추가</span>
               </div>
             ))}
+
+            <button onClick={handleAddSlot} style={{ width: '100%', padding: '12px', borderRadius: '16px', border: '1px dashed var(--glass-border)', background: 'rgba(255,255,255,0.02)', color: 'var(--foreground)', opacity: 0.8, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', transition: 'all 0.2s', marginTop: '0.5rem' }}>
+              <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>+ 슬롯 확장 (1000 🪙✋)</span>
+            </button>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', padding: '0 10px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '6px 14px', borderRadius: '100px', fontSize: '0.9rem' }}>💰 <b>{stats.coins}</b></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '6px 14px', borderRadius: '100px', fontSize: '0.9rem' }}>🪙✋ <b>{stats.coins}</b></div>
             <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--foreground)', opacity: 0.85, letterSpacing: '-0.02em' }}>
               {user?.displayName || '사용자'} 님
             </div>
