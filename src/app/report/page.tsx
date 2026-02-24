@@ -370,7 +370,7 @@ export default function Report() {
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                         <div style={{ fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <Image src="/assets/images/coin.png" width={22} height={22} alt="coin" /> {stats.monthlyCoins.toLocaleString()}
+                            <Image src="/assets/images/coin.png" width={22} height={22} alt="coin" style={{ objectFit: 'contain' }} /> {stats.monthlyCoins.toLocaleString()}
                         </div>
                         <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>보유 코인</div>
                     </div>

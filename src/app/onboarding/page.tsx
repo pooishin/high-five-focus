@@ -82,14 +82,14 @@ export default function Onboarding() {
             {/* Content */}
             <div className="onboarding-content animate-fade-in" key={currentStep}>
                 {/* Logo */}
-                <div className="onboarding-logo" style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'center' }}>
-                    <Image src="/assets/images/coin.png" width={80} height={80} alt="Logo" />
+                <div className="onboarding-logo" style={{ fontSize: '4rem', marginBottom: '1rem', display: 'flex', justifyContent: 'center' }}>
+                    👋
                 </div>
 
                 {/* Icon */}
                 <div className="onboarding-icon" style={{ display: 'flex', justifyContent: 'center' }}>
                     {step.icon.startsWith('/') ? (
-                        <Image src={step.icon} width={80} height={80} alt="step icon" />
+                        <Image src={step.icon} width={80} height={80} alt="step icon" style={{ objectFit: 'contain' }} />
                     ) : (
                         step.icon
                     )}
