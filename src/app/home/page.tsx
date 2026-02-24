@@ -94,23 +94,60 @@ export default function Home() {
     }
   }, [user]);
 
-  // 사운드 및 진동 재생 함수
+  // 사운드 및 진동 재생 함수 (Web Audio API를 이용한 합성 박수 소리 포함)
   const playFeedback = (type: 'short' | 'long') => {
-    // 사운드
+    // 합성 박수 소리 생성 (오디오 파일이 없을 경우를 대비)
+    const playSyntheticClap = (duration: number) => {
+      try {
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const nodes = 5; // 박수 소리 레이어 수
+        for (let i = 0; i < nodes; i++) {
+          const noise = audioCtx.createBufferSource();
+          const bufferSize = audioCtx.sampleRate * duration;
+          const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let j = 0; j < bufferSize; j++) {
+            data[j] = Math.random() * 2 - 1;
+          }
+          noise.buffer = buffer;
+
+          const filter = audioCtx.createBiquadFilter();
+          filter.type = 'bandpass';
+          filter.frequency.value = 800 + Math.random() * 1200;
+          filter.Q.value = 1;
+
+          const gain = audioCtx.createGain();
+          gain.gain.setValueAtTime(0.2, audioCtx.currentTime + (i * 0.01));
+          gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1 + (i * 0.01));
+
+          noise.connect(filter);
+          filter.connect(gain);
+          gain.connect(audioCtx.destination);
+          noise.start(audioCtx.currentTime + (i * 0.01));
+        }
+      } catch (e) {
+        console.error("Synthetic audio failed:", e);
+      }
+    };
+
+    // 실제 파일 시도 후 실패 시 합성음 실행
     try {
       const audio = new Audio(type === 'short' ? '/assets/sounds/clapping.mp3' : '/assets/sounds/clapping_long.mp3');
       audio.volume = 0.7;
-      audio.play().catch(e => console.log('Audio play failed (interaction required):', e));
+      audio.play().catch(() => {
+        // 파일 로드 실패 시 합성음 재생
+        playSyntheticClap(type === 'short' ? 0.2 : 1.0);
+      });
     } catch (e) {
-      console.error('Audio setup failed:', e);
+      playSyntheticClap(0.2);
     }
 
     // 진동 (Haptic)
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       if (type === 'short') {
-        navigator.vibrate(200); // 200ms 진동
+        navigator.vibrate(200);
       } else {
-        navigator.vibrate([100, 50, 100, 50, 300]); // 패턴 진동
+        navigator.vibrate([100, 50, 100, 50, 300]);
       }
     }
   };
@@ -219,7 +256,8 @@ export default function Home() {
       }
     }
     setShowCompletion({ visible: true, title });
-    setTimeout(() => setShowCompletion({ visible: false, title: "" }), 3000);
+    // 모달이므로 사용자가 닫기 전까지 유지하거나 5초 뒤 자동 종료
+    setTimeout(() => setShowCompletion({ visible: false, title: "" }), 5000);
   };
 
   const getFocusMessage = () => {
@@ -384,11 +422,16 @@ export default function Home() {
       onTouchEnd={handleTouchEnd}
     >
       {showCompletion.visible && (
-        <div className="completion-overlay animate-pop-in">
-          <div className="completion-content">
-            <div className="hand-icon">✋</div>
-            <h2 className="completion-title">HIGH FIVE!</h2>
-            <p className="completion-subtitle">"{showCompletion.title}" 완료!</p>
+        <div className="modal-overlay" style={{ zIndex: 2000 }} onClick={() => setShowCompletion({ visible: false, title: "" })}>
+          <div className="modal-content completion-modal animate-pop-in" onClick={e => e.stopPropagation()} style={{ textAlign: 'center', background: 'linear-gradient(135deg, var(--surface) 0%, #1a1a1a 100%)', border: '2px solid var(--primary)' }}>
+            <div style={{ fontSize: '5rem', marginBottom: '1rem', filter: 'drop-shadow(0 0 20px var(--primary))' }}>✋</div>
+            <h2 style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '0.5rem', color: 'var(--primary)', letterSpacing: '-0.05em' }}>HIGH FIVE!</h2>
+            <p style={{ fontSize: '1.1rem', opacity: 0.9, marginBottom: '2rem', lineHeight: 1.5 }}>
+              <b>"{showCompletion.title}"</b><br />과업을 완벽하게 완료했습니다!
+            </p>
+            <button className="btn-primary" onClick={() => setShowCompletion({ visible: false, title: "" })} style={{ width: '100%', padding: '1rem', fontSize: '1.2rem' }}>
+              계속하기 ✨
+            </button>
           </div>
         </div>
       )}
@@ -470,9 +513,7 @@ export default function Home() {
                   {!reorderingTaskId && !isCompleted && (
                     <div className="task-controls" style={{ marginLeft: '1rem', display: 'flex', gap: '0.6rem', position: 'relative', zIndex: 1 }}>
                       <button className="icon-btn" onClick={(e) => { e.stopPropagation(); handleToggleTask(task.id); }} style={{ background: isActive ? '#000' : 'var(--surface)', color: isActive ? color : 'var(--foreground)' }}>{isActive ? '⏸' : '▶'}</button>
-                      {task.remainingSeconds <= 0 && (
-                        <button className="icon-btn" onClick={(e) => { e.stopPropagation(); handleTaskCompletion(task.title); }} style={{ background: 'var(--primary)', color: '#000' }}>✅</button>
-                      )}
+                      <button className="icon-btn" onClick={(e) => { e.stopPropagation(); handleTaskCompletion(task.title); }} style={{ background: 'var(--primary)', color: '#000' }}>✅</button>
                     </div>
                   )}
                   {reorderingTaskId === task.id && (
