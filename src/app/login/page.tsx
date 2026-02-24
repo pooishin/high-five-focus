@@ -122,7 +122,7 @@ export default function Login() {
                             disabled={loading}
                             style={{ width: '100%', marginBottom: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', padding: '0.8rem', borderRadius: '12px', background: '#FFF', color: '#000', border: 'none', fontWeight: 600, fontSize: '0.95rem' }}
                         >
-                            <span style={{ fontSize: '1.2rem' }}>🔐</span>
+                            <Image src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width={18} height={18} alt="Google" />
                             구글로그인
                         </button>
 

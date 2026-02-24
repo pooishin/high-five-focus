@@ -222,6 +222,9 @@ export default function Home() {
     });
 
     if (user) {
+      // 즉시 UI 상태 업데이트
+      setTasks(prev => prev.map(t => t.id === completedTask.id ? { ...t, status: 'completed', remainingSeconds: 0 } : t));
+
       await supabase.rpc('increment_stats', { user_id: user.uid, exp_bonus: 50, coin_bonus: reward });
       await supabase.from('tasks').update({ status: 'completed', remaining_seconds: 0 }).eq('id', completedTask.id);
 
@@ -550,9 +553,9 @@ export default function Home() {
               </div>
             ))}
 
-            <button onClick={handleAddSlot} style={{ width: '100%', padding: '12px', borderRadius: '16px', border: '1px dashed var(--glass-border)', background: 'rgba(255,255,255,0.02)', color: 'var(--foreground)', opacity: 0.8, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', transition: 'all 0.2s', marginTop: '0.5rem' }}>
-              <span style={{ fontSize: '0.9rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                + 슬롯 확장 (1000 <Image src="/assets/images/coin.png" width={18} height={18} alt="coin" style={{ objectFit: 'contain' }} />)
+            <button onClick={handleAddSlot} style={{ width: '100%', padding: '10px', borderRadius: '16px', border: '1px dashed var(--glass-border)', background: 'rgba(255,255,255,0.02)', color: 'var(--foreground)', opacity: 0.8, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px', transition: 'all 0.2s', marginTop: '0.5rem' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                + 테스크 추가 (1000 <Image src="/assets/images/coin.png" width={16} height={16} alt="coin" style={{ objectFit: 'contain' }} />)
               </span>
             </button>
           </div>
