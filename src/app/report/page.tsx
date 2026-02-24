@@ -318,8 +318,9 @@ export default function Report() {
                     </Link>
                     <h1 style={{ fontSize: "1.2rem", fontWeight: 800 }}>MY REPORT</h1>
                 </div>
-                <div className="gold-badge" style={{ fontSize: "0.8rem" }}>
-                    Lv.{userStats.level}
+                <div className="gold-badge" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', padding: '6px 12px' }}>
+                    <span style={{ fontSize: '0.7rem', opacity: 0.9, fontWeight: 500 }}>{user?.displayName || '사용자'} 님</span>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 800 }}>Lv.{userStats.level}</span>
                 </div>
             </header>
 

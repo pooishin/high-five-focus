@@ -456,6 +456,9 @@ export default function Home() {
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', padding: '0 10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(255,255,255,0.05)', padding: '6px 14px', borderRadius: '100px', fontSize: '0.9rem' }}>💰 <b>{stats.coins}</b></div>
+            <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--foreground)', opacity: 0.85, letterSpacing: '-0.02em' }}>
+              {user?.displayName || '사용자'} 님
+            </div>
             <div className="avatar-floating-mini" style={{ width: '45px', height: '45px', background: 'rgba(255,255,255,0.05)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', border: '1px solid var(--primary)' }}>{getCharEmoji(stats.level)}</div>
           </div>
         </div>
