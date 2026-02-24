@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 interface ChartData {
     label: string;
@@ -367,8 +368,10 @@ export default function Report() {
                         <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{stats.streak}</div>
                         <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>누적 기록일</div>
                     </div>
-                    <div>
-                        <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>🪙✋ {stats.monthlyCoins.toLocaleString()}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                        <div style={{ fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <Image src="/assets/images/coin.png" width={22} height={22} alt="coin" /> {stats.monthlyCoins.toLocaleString()}
+                        </div>
                         <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>보유 코인</div>
                     </div>
                 </div>

@@ -26,7 +26,7 @@ const onboardingSteps = [
         highlight: 'Traffic Light UX (초록/노랑/빨강)'
     },
     {
-        icon: '🪙✋',
+        icon: '/assets/images/coin.png',
         title: '코인을 모아 보상을 받으세요',
         description: '과업을 완료할 때마다 코인과 경험치를 획득합니다. 레벨업하고 아바타를 성장시키세요!',
         highlight: '하루 최대 200코인 획득 가능'
@@ -82,13 +82,17 @@ export default function Onboarding() {
             {/* Content */}
             <div className="onboarding-content animate-fade-in" key={currentStep}>
                 {/* Logo */}
-                <div className="onboarding-logo" style={{ fontSize: '4rem', marginBottom: '1rem', display: 'flex', justifyContent: 'center' }}>
-                    👋
+                <div className="onboarding-logo" style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'center' }}>
+                    <Image src="/assets/images/coin.png" width={80} height={80} alt="Logo" />
                 </div>
 
                 {/* Icon */}
-                <div className="onboarding-icon">
-                    {step.icon}
+                <div className="onboarding-icon" style={{ display: 'flex', justifyContent: 'center' }}>
+                    {step.icon.startsWith('/') ? (
+                        <Image src={step.icon} width={80} height={80} alt="step icon" />
+                    ) : (
+                        step.icon
+                    )}
                 </div>
 
                 {/* Title */}
