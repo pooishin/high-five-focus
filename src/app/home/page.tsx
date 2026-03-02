@@ -482,15 +482,53 @@ export default function Home() {
         </div>
       )}
 
-      {/* Header */}
-      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', padding: '0 0.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button onClick={() => router.push('/plan')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex' }}>
-            <span style={{ fontSize: '1.8rem', marginRight: '4px' }}>👋</span>
+      {/* Header - Triple Flex Layout to ensure center alignment */}
+      <header style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '1.2rem',
+        padding: '0 0.75rem',
+        height: '3.5rem'
+      }}>
+        {/* Left: Hamburger Menu */}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}>
+          <button style={{ background: 'none', border: 'none', padding: '8px', cursor: 'pointer', opacity: 0.8 }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--foreground)' }}>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
           </button>
-          <h2 style={{ fontSize: '1.1rem', fontWeight: 900 }}>Hi-Five Focus</h2>
         </div>
-        {/* 기존 레벨/버튼 영역 삭제 */}
+
+        {/* Center: Logo & Title */}
+        <div style={{ flex: 2, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
+          <Image src="/assets/images/logo.svg" width={26} height={26} alt="Logo" style={{ filter: 'drop-shadow(0 0 5px var(--primary-low))' }} />
+          <h1 style={{ fontSize: '1.15rem', fontWeight: 950, letterSpacing: '-0.04em', background: 'linear-gradient(to bottom, #fff, #999)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+            Hi-Five Focus
+          </h1>
+        </div>
+
+        {/* Right: Plan Button */}
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            onClick={() => router.push('/plan')}
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              border: '1.5px solid var(--glass-border)',
+              padding: '5px 12px',
+              borderRadius: '8px',
+              fontSize: '0.7rem',
+              fontWeight: 800,
+              color: 'var(--primary)',
+              letterSpacing: '0.05em',
+              boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+            }}
+          >
+            PLAN
+          </button>
+        </div>
       </header>
 
       <div className="rainbow-container animate-fade-in" style={{ margin: '0.5rem' }}>
