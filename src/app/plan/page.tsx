@@ -26,13 +26,40 @@ export default function PlanPage() {
     { id: 5, title: "Email Cleanup", totalSeconds: 30 * 60, remainingSeconds: 30 * 60, status: "pending" },
   ]);
 
-  const [totalWorkHours, setTotalWorkHours] = useState(8);
+  const [totalWorkHours, setTotalWorkHours] = useState(0);
   const [totalWorkMinutes, setTotalWorkMinutes] = useState(0);
-  const [focusHours, setFocusHours] = useState(3);
+  const [focusHours, setFocusHours] = useState(0);
   const [focusMinutes, setFocusMinutes] = useState(0);
 
-  const totalWorkTime = totalWorkHours * 60 + totalWorkMinutes;
-  const focusTime = focusHours * 60 + focusMinutes;
+  useEffect(() => {
+    if (user) {
+      const loadPlan = async () => {
+        const { data: profile } = await supabase.from('profiles').select('last_plan_at, plan_total_seconds, plan_focus_seconds').eq('id', user.uid).single();
+
+        if (profile) {
+          const lastPlanAt = profile.last_plan_at ? new Date(profile.last_plan_at) : null;
+          const isToday = lastPlanAt && lastPlanAt.toDateString() === new Date().toDateString();
+
+          if (isToday) {
+            // 오늘 내 재방문인 경우 기존 값 로드
+            const totalSecs = profile.plan_total_seconds || 0;
+            const focusSecs = profile.plan_focus_seconds || 0;
+            setTotalWorkHours(Math.floor(totalSecs / 3600));
+            setTotalWorkMinutes(Math.floor((totalSecs % 3600) / 60));
+            setFocusHours(Math.floor(focusSecs / 3600));
+            setFocusMinutes(Math.floor((focusSecs % 3600) / 60));
+          } else {
+            // 새 날인 경우 0으로 초기화
+            setTotalWorkHours(0);
+            setTotalWorkMinutes(0);
+            setFocusHours(0);
+            setFocusMinutes(0);
+          }
+        }
+      };
+      loadPlan();
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!user) {
@@ -40,20 +67,42 @@ export default function PlanPage() {
     }
   }, [user, router]);
 
+  const totalWorkTime = totalWorkHours * 60 + totalWorkMinutes;
+  const focusTime = focusHours * 60 + focusMinutes;
+
   const isStartEnabled = totalWorkTime > 0 && focusTime > 0;
 
   const handleStart = async () => {
     if (user) {
-      // 기존 테스크 초기화 (새로운 하루 시작)
-      await supabase.from('tasks').delete().eq('user_id', user.uid);
+      const now = new Date();
+      const { data: profile } = await supabase.from('profiles').select('last_plan_at').eq('id', user.uid).single();
+      const lastPlanAt = profile?.last_plan_at ? new Date(profile.last_plan_at) : null;
+      const isToday = lastPlanAt && lastPlanAt.toDateString() === now.toDateString();
 
-      // 시작 보상 (선택 사항, 여기서는 0으로 설정하거나 제거 가능)
-      const initialReward = 10;
-      await supabase.rpc('increment_stats', {
-        user_id: user.uid,
-        exp_bonus: 0,
-        coin_bonus: initialReward
-      });
+      // 오늘의 총 에너지 초 단위 계산
+      const totalSecs = totalWorkHours * 3600 + totalWorkMinutes * 60;
+      const focusSecs = focusHours * 3600 + focusMinutes * 60;
+
+      if (!isToday) {
+        // 날짜가 바뀌었거나 처음인 경우에만 기존 테스크 초기화
+        await supabase.from('tasks').delete().eq('user_id', user.uid);
+      }
+
+      // 프로필에 오늘 설정값 저장
+      await supabase.from('profiles').update({
+        last_plan_at: now.toISOString(),
+        plan_total_seconds: totalSecs,
+        plan_focus_seconds: focusSecs
+      }).eq('id', user.uid);
+
+      // 시작 보상 (새 날인 경우에만)
+      if (!isToday) {
+        await supabase.rpc('increment_stats', {
+          user_id: user.uid,
+          exp_bonus: 0,
+          coin_bonus: 10
+        });
+      }
 
       router.push('/home');
     }

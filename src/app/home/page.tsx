@@ -75,7 +75,24 @@ export default function Home() {
     if (user) {
       const loadData = async () => {
         const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.uid).single();
-        if (profile) setStats({ exp: profile.exp, level: profile.level, coins: profile.coins, monthlyCoins: 0 });
+        if (profile) {
+          setStats({ exp: profile.exp, level: profile.level, coins: profile.coins, monthlyCoins: 0 });
+
+          // 오늘의 가용 에너지 동기화 및 24시간 리셋 체크
+          const lastPlanAt = profile.last_plan_at ? new Date(profile.last_plan_at) : null;
+          const now = new Date();
+          const isToday = lastPlanAt && lastPlanAt.toDateString() === now.toDateString();
+          const hoursSincePlan = lastPlanAt ? (now.getTime() - lastPlanAt.getTime()) / (1000 * 60 * 60) : 25;
+
+          if (isToday && hoursSincePlan < 24) {
+            // 하루 내이고 24시간 미만인 경우: 설정된 전체 에너지를 초기값으로 (데이터 누락 수정)
+            setRemainingEnergySeconds(profile.plan_total_seconds || 480 * 60);
+          } else {
+            // 다른 날이거나 24시간이 경과한 경우: 에너지 0으로 초기화
+            setRemainingEnergySeconds(0);
+            // 필요 시 비정상적인 데이터 정화를 위해 24시간 경과 테스크는 삭제 로직을 추가할 수 있습니다.
+          }
+        }
 
         const { data: remoteTasks } = await supabase.from('tasks').select('*').eq('user_id', user.uid).order('position', { ascending: true });
         if (remoteTasks && remoteTasks.length > 0) {
@@ -152,33 +169,57 @@ export default function Home() {
     }
   };
 
+  const lastTickAt = useRef<number>(Date.now());
+
   useEffect(() => {
     const interval = setInterval(() => {
-      setTasks(prevTasks => {
-        const activeIdx = prevTasks.findIndex(t => t.status === "active");
-        if (activeIdx === -1) return prevTasks;
+      const now = Date.now();
+      const elapsedMs = now - lastTickAt.current;
+      const elapsedSecs = Math.floor(elapsedMs / 1000);
 
-        setRemainingEnergySeconds(prev => Math.max(0, prev - 1));
-
-        const newTasks = [...prevTasks];
-        const nextSeconds = newTasks[activeIdx].remainingSeconds - 1;
-
-        // 0초 도달 시 알림 및 피드백 (한 번만 실행되도록 0일 때만)
-        if (nextSeconds === 0) {
-          playFeedback('short');
-          if (Notification.permission === 'granted') {
-            new Notification("테스크 완료! 👏", {
-              body: `${newTasks[activeIdx].title} 끝! 고생하셨습니다.`,
-              icon: '/assets/images/logo.svg'
-            });
+      if (elapsedSecs >= 1) {
+        setTasks(prevTasks => {
+          const activeIdx = prevTasks.findIndex(t => t.status === "active");
+          if (activeIdx === -1) {
+            lastTickAt.current = now;
+            return prevTasks;
           }
-        }
 
-        newTasks[activeIdx] = { ...newTasks[activeIdx], remainingSeconds: nextSeconds };
-        return newTasks;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
+          setRemainingEnergySeconds(prev => Math.max(0, prev - elapsedSecs));
+
+          const newTasks = [...prevTasks];
+          const nextSeconds = newTasks[activeIdx].remainingSeconds - elapsedSecs;
+
+          // 0초 도달 시 피드백 및 알림 (처음 0이 되거나 그 이하로 내려갈 때 실행)
+          if (newTasks[activeIdx].remainingSeconds > 0 && nextSeconds <= 0) {
+            playFeedback('short');
+            if (Notification.permission === 'granted') {
+              new Notification("테스크 완료! 👏", {
+                body: `${newTasks[activeIdx].title} 끝! 고생하셨습니다.`,
+                icon: '/assets/images/logo.svg'
+              });
+            }
+          }
+
+          newTasks[activeIdx] = { ...newTasks[activeIdx], remainingSeconds: nextSeconds };
+          lastTickAt.current = now; // 실제 차감된 시점을 기준으로 갱신
+          return newTasks;
+        });
+      }
+    }, 500); // 0.5초 간격으로 체크하여 더 빠른 반응성 제공
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // 백그라운드에서 돌아왔을 때 마지막 틱 시점과 비교하여 즉시 동기화가 일어나게 함
+        // (interval이 다음 0.5초에 실행되면서 자연스럽게 elapsedSecs를 계산함)
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -447,20 +488,15 @@ export default function Home() {
           </button>
           <h2 style={{ fontSize: '1.1rem', fontWeight: 900 }}>Hi-Five Focus</h2>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 800 }}>Lv.{stats.level}</div>
-            <div style={{ fontSize: '0.7rem', opacity: 0.6 }}>{stats.exp} EXP</div>
-          </div>
-          <button onClick={handleToggleFocusMode} style={{ background: isFocusMode ? 'var(--primary)' : 'var(--surface-alt)', color: isFocusMode ? '#000' : 'var(--foreground)', padding: '4px 12px', borderRadius: '100px', fontSize: '0.75rem', fontWeight: 800 }}>
-            {isFocusMode ? '🔥 FOCUS ON' : 'START FOCUS'}
-          </button>
-        </div>
+        {/* 기존 레벨/버튼 영역 삭제 */}
       </header>
 
       <div className="rainbow-container animate-fade-in" style={{ margin: '0.5rem' }}>
         <div className="rainbow-inner" style={{ padding: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.75rem', gap: '0.6rem', alignItems: 'center' }}>
+            <button onClick={handleToggleFocusMode} style={{ background: isFocusMode ? 'var(--primary)' : 'var(--surface-alt)', color: isFocusMode ? '#000' : 'var(--foreground)', padding: '4px 14px', borderRadius: '100px', fontSize: '0.75rem', fontWeight: 800, boxShadow: isFocusMode ? '0 0 15px var(--primary-low)' : 'none' }}>
+              {isFocusMode ? '🔥 FOCUS ON' : 'START FOCUS'}
+            </button>
             <Link href="/report" className="btn-report">REPORT 📊</Link>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
@@ -514,7 +550,7 @@ export default function Home() {
                     )}
                   </div>
                   {!reorderingTaskId && !isCompleted && (
-                    <div className="task-controls" style={{ marginLeft: '1rem', display: 'flex', gap: '0.6rem', position: 'relative', zIndex: 1 }}>
+                    <div className="task-controls" style={{ marginLeft: '1rem', display: 'flex', gap: '0.8rem', position: 'relative', zIndex: 1, alignItems: 'center' }}>
                       <button className="icon-btn" onClick={(e) => { e.stopPropagation(); handleToggleTask(task.id); }} style={{ background: isActive ? '#000' : 'var(--surface)', color: isActive ? color : 'var(--foreground)' }}>{isActive ? '⏸' : '▶'}</button>
                       <button className="icon-btn" onClick={(e) => { e.stopPropagation(); handleTaskCompletion(task.title); }} style={{ background: 'var(--primary)', color: '#000' }}>✅</button>
                     </div>
@@ -564,10 +600,19 @@ export default function Home() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.05)', padding: '6px 14px', borderRadius: '100px', fontSize: '0.9rem' }}>
               <Image src="/assets/images/coin.png" width={24} height={24} alt="coin" style={{ objectFit: 'contain' }} /> <b>{stats.coins}</b>
             </div>
-            <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--foreground)', opacity: 0.85, letterSpacing: '-0.02em' }}>
-              {user?.displayName || '사용자'} 님
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+              <div style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--foreground)', letterSpacing: '-0.02em' }}>
+                {user?.displayName || '사용자'} 님
+              </div>
+              <div style={{ display: 'flex', gap: '6px', fontSize: '0.7rem', fontWeight: 800, opacity: 0.6 }}>
+                <span>Lv.{stats.level}</span>
+                <span>•</span>
+                <span>{stats.exp} EXP</span>
+              </div>
             </div>
-            <div className="avatar-floating-mini" style={{ width: '45px', height: '45px', background: 'rgba(255,255,255,0.05)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', border: '1px solid var(--primary)' }}>{getCharEmoji(stats.level)}</div>
+            <div className="avatar-floating-mini" style={{ width: '45px', height: '45px', background: 'rgba(255,255,255,0.05)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', border: '1px solid var(--primary)', cursor: 'pointer' }} onClick={() => logout()}>
+              {getCharEmoji(stats.level)}
+            </div>
           </div>
         </div>
       </div>
