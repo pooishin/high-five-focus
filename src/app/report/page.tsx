@@ -303,21 +303,23 @@ export default function Report() {
                 <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
                     <Link
                         href="/home"
+                        aria-label="홈으로 돌아가기"
                         style={{
                             background: "var(--surface-alt)",
-                            border: "1px solid var(--glass-border)",
-                            borderRadius: "12px",
-                            padding: "8px 16px",
-                            fontSize: "0.9rem",
-                            fontWeight: 700,
-                            color: "var(--foreground)",
+                            border: "1.5px solid var(--glass-border)",
+                            borderRadius: "10px",
+                            padding: "8px 12px",
+                            fontSize: "1.1rem",
+                            fontWeight: 900,
+                            color: "var(--primary)",
                             display: "flex",
                             alignItems: "center",
-                            gap: "6px",
-                            textDecoration: "none"
+                            justifyContent: "center",
+                            textDecoration: "none",
+                            boxShadow: "0 4px 10px rgba(0,0,0,0.1)"
                         }}
                     >
-                        <span>🏠</span> DASHBOARD
+                        <span>←</span>
                     </Link>
                     <h1 style={{ fontSize: "1.2rem", fontWeight: 800 }}>MY REPORT</h1>
                 </div>

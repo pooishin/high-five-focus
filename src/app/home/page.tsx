@@ -504,8 +504,8 @@ export default function Home() {
 
         {/* Center: Logo & Title */}
         <div style={{ flex: 2, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '8px' }}>
-          <Image src="/assets/images/logo.svg" width={26} height={26} alt="Logo" style={{ filter: 'drop-shadow(0 0 5px var(--primary-low))' }} />
-          <h1 style={{ fontSize: '1.15rem', fontWeight: 950, letterSpacing: '-0.04em', background: 'linear-gradient(to bottom, #fff, #999)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+          <span style={{ fontSize: '1.6rem', filter: 'drop-shadow(0 0 8px var(--primary-low))' }}>✋</span>
+          <h1 style={{ fontSize: '1.2rem', fontWeight: 950, letterSpacing: '-0.04em', background: 'linear-gradient(to bottom, #fff, #999)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             Hi-Five Focus
           </h1>
         </div>
