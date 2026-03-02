@@ -85,12 +85,12 @@ export default function Home() {
           const hoursSincePlan = lastPlanAt ? (now.getTime() - lastPlanAt.getTime()) / (1000 * 60 * 60) : 25;
 
           if (isToday && hoursSincePlan < 24) {
-            // 하루 내이고 24시간 미만인 경우: 설정된 전체 에너지를 초기값으로 (데이터 누락 수정)
-            setRemainingEnergySeconds(profile.plan_total_seconds || 480 * 60);
+            // 하루 내이고 24시간 미만인 경우: 설정된 전체 에너지를 초기값으로
+            const plannedEnergy = profile.plan_total_seconds || 0;
+            setRemainingEnergySeconds(plannedEnergy);
           } else {
             // 다른 날이거나 24시간이 경과한 경우: 에너지 0으로 초기화
             setRemainingEnergySeconds(0);
-            // 필요 시 비정상적인 데이터 정화를 위해 24시간 경과 테스크는 삭제 로직을 추가할 수 있습니다.
           }
         }
 
