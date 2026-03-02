@@ -57,7 +57,7 @@ export default function Report() {
 
         // 오른쪽으로 스와이프 (← 방향의 터치 이동, distanceX < 0) -> Home 이동
         if (Math.abs(distanceX) > Math.abs(distanceY) * 2 && distanceX < -minSwipeDistance) {
-            router.push('/');
+            router.push('/home');
         }
 
         setTouchStart({ x: 0, y: 0 });
@@ -302,7 +302,7 @@ export default function Report() {
             <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2rem" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
                     <Link
-                        href="/"
+                        href="/home"
                         style={{
                             background: "var(--surface-alt)",
                             border: "1px solid var(--glass-border)",
