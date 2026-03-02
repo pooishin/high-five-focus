@@ -31,7 +31,7 @@ interface UserStats {
 export default function Report() {
     const { user } = useAuth();
     const router = useRouter();
-    const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("weekly");
+    const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
     const [dailyRecords, setDailyRecords] = useState<DailyRecord[]>([]);
     const [userStats, setUserStats] = useState<UserStats>({ exp: 0, level: 1, coins: 0, monthlyCoins: 0 });
     const [toast, setToast] = useState<string | null>(null);
@@ -317,7 +317,7 @@ export default function Report() {
                             textDecoration: "none"
                         }}
                     >
-                        <span>←</span> HOME
+                        <span>🏠</span> DASHBOARD
                     </Link>
                     <h1 style={{ fontSize: "1.2rem", fontWeight: 800 }}>MY REPORT</h1>
                 </div>
