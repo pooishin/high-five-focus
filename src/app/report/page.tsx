@@ -305,21 +305,22 @@ export default function Report() {
                         href="/home"
                         aria-label="홈으로 돌아가기"
                         style={{
-                            background: "var(--surface-alt)",
-                            border: "1.5px solid var(--glass-border)",
+                            background: "rgba(255, 255, 255, 0.1)",
+                            border: "1.5px solid rgba(255, 255, 255, 0.2)",
                             borderRadius: "10px",
                             padding: "8px 12px",
-                            fontSize: "1.1rem",
-                            fontWeight: 900,
-                            color: "var(--primary)",
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                             textDecoration: "none",
-                            boxShadow: "0 4px 10px rgba(0,0,0,0.1)"
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
+                            transition: "all 0.2s ease"
                         }}
                     >
-                        <span>←</span>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="19" y1="12" x2="5" y2="12"></line>
+                            <polyline points="12 19 5 12 12 5"></polyline>
+                        </svg>
                     </Link>
                     <h1 style={{ fontSize: "1.2rem", fontWeight: 800 }}>MY REPORT</h1>
                 </div>
