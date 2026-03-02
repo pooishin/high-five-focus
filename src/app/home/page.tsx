@@ -320,7 +320,9 @@ export default function Home() {
     const h = Math.floor(s_total / 3600);
     const m = Math.floor((s_total % 3600) / 60);
     const s = s_total % 60;
-    return `${isNeg ? '-' : ''}${h > 0 ? h + 'h ' : ''}${m > 0 || h > 0 ? m.toString().padStart(2, '0') + 'm ' : ''}${s.toString().padStart(2, '0')}s`;
+
+    // 에너지가 0이거나 낮을 때도 형식을 유지하여 레이아웃 흔들림 방지
+    return `${isNeg ? '-' : ''}${h}h ${m.toString().padStart(2, '0')}m ${s.toString().padStart(2, '0')}s`;
   };
 
   const handleToggleFocusMode = () => {
@@ -493,8 +495,8 @@ export default function Home() {
 
       <div className="rainbow-container animate-fade-in" style={{ margin: '0.5rem' }}>
         <div className="rainbow-inner" style={{ padding: '1rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.75rem', gap: '0.6rem', alignItems: 'center' }}>
-            <button onClick={handleToggleFocusMode} style={{ background: isFocusMode ? 'var(--primary)' : 'var(--surface-alt)', color: isFocusMode ? '#000' : 'var(--foreground)', padding: '4px 14px', borderRadius: '100px', fontSize: '0.75rem', fontWeight: 800, boxShadow: isFocusMode ? '0 0 15px var(--primary-low)' : 'none' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', gap: '0.6rem', alignItems: 'center' }}>
+            <button onClick={handleToggleFocusMode} style={{ background: isFocusMode ? 'var(--primary)' : 'var(--surface-alt)', color: isFocusMode ? '#000' : 'var(--foreground)', padding: '6px 16px', borderRadius: '100px', fontSize: '0.75rem', fontWeight: 800, boxShadow: isFocusMode ? '0 0 15px var(--primary-low)' : '0 4px 10px rgba(0,0,0,0.2)' }}>
               {isFocusMode ? '🔥 FOCUS ON' : 'START FOCUS'}
             </button>
             <Link href="/report" className="btn-report">REPORT 📊</Link>
@@ -596,7 +598,7 @@ export default function Home() {
             </button>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', padding: '0 10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2.5rem', padding: '0 10px', borderTop: '1px solid var(--glass-border)', paddingTop: '1.5rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.05)', padding: '6px 14px', borderRadius: '100px', fontSize: '0.9rem' }}>
               <Image src="/assets/images/coin.png" width={24} height={24} alt="coin" style={{ objectFit: 'contain' }} /> <b>{stats.coins}</b>
             </div>
@@ -610,7 +612,7 @@ export default function Home() {
                 <span>{stats.exp} EXP</span>
               </div>
             </div>
-            <div className="avatar-floating-mini" style={{ width: '45px', height: '45px', background: 'rgba(255,255,255,0.05)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', border: '1px solid var(--primary)', cursor: 'pointer' }} onClick={() => logout()}>
+            <div className="avatar-floating-mini" style={{ width: '45px', height: '45px', background: 'rgba(255,255,255,0.05)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', border: '1px solid var(--primary)', cursor: 'pointer', boxShadow: '0 0 10px var(--primary-low)' }} onClick={() => logout()}>
               {getCharEmoji(stats.level)}
             </div>
           </div>

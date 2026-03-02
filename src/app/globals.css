@@ -24,11 +24,15 @@
   --max-width: 480px;
 }
 
+html {
+  -webkit-tap-highlight-color: transparent;
+  min-height: 100%;
+}
+
 * {
   box-sizing: border-box;
   padding: 0;
   margin: 0;
-  -webkit-tap-highlight-color: transparent;
 }
 
 html {
