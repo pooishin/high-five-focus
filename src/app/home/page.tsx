@@ -694,9 +694,17 @@ export default function Home() {
                   )}
 
                   <div className="task-info-group" style={{ position: 'relative', zIndex: 1 }}>
-                    <div className="task-main-info" style={{ justifyContent: 'space-between' }}>
-                      <span style={{ fontWeight: 700 }}>{isCompleted && "✨ "}{task.title}</span>
-                      {isCompleted ? <span className="gold-badge">COMPLETED</span> : <span className="task-time-badge">{formatTimeHM(task.totalSeconds)}</span>}
+                    <div className="task-main-info" style={{ justifyContent: 'space-between', overflow: 'hidden', gap: '8px' }}>
+                      <span style={{
+                        fontWeight: 700,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        flex: 1
+                      }}>
+                        {isCompleted && "✨ "}{task.title}
+                      </span>
+                      {isCompleted ? <span className="gold-badge" style={{ flexShrink: 0 }}>COMPLETED</span> : <span className="task-time-badge" style={{ flexShrink: 0 }}>{formatTimeHM(task.totalSeconds)}</span>}
                     </div>
                     {!reorderingTaskId && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.4rem' }}>
