@@ -39,6 +39,7 @@ export default function Home() {
   const [remainingEnergySeconds, setRemainingEnergySeconds] = useState(480 * 60);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [showCompletion, setShowCompletion] = useState({ visible: false, title: "" });
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [reorderingTaskId, setReorderingTaskId] = useState<number | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -482,6 +483,117 @@ export default function Home() {
         </div>
       )}
 
+      {/* Sidebar Drawer */}
+      {isSidebarOpen && (
+        <>
+          <div
+            className="modal-overlay animate-fade-in"
+            style={{ zIndex: 3000, opacity: 1, visibility: 'visible' }}
+            onClick={() => setIsSidebarOpen(false)}
+          />
+          <div
+            className="sidebar-drawer animate-slide-right"
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              width: '80%',
+              maxWidth: '300px',
+              height: '100dvh',
+              background: 'rgba(20, 20, 20, 0.96)',
+              backdropFilter: 'blur(20px)',
+              zIndex: 3001,
+              padding: '2.5rem 1.25rem',
+              boxShadow: '10px 0 30px rgba(0,0,0,0.5)',
+              display: 'flex',
+              flexDirection: 'column',
+              borderRight: '1px solid var(--glass-border)',
+              WebkitBackdropFilter: 'blur(20px)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 15px var(--primary-low)' }}>
+                  <span style={{ fontSize: '1.2rem' }}>✋</span>
+                </div>
+                <span style={{ fontWeight: 900, fontSize: '1rem', letterSpacing: '0.05em', color: 'var(--foreground)' }}>MENU</span>
+              </div>
+              <button
+                onClick={() => setIsSidebarOpen(false)}
+                style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'var(--foreground)', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+
+            <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+              <button
+                onClick={() => { router.push('/archive'); setIsSidebarOpen(false); }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                  padding: '1.2rem 1rem',
+                  borderRadius: '18px',
+                  background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%)',
+                  border: '1px solid var(--glass-border)',
+                  color: 'var(--foreground)',
+                  textAlign: 'left',
+                  cursor: 'pointer'
+                }}
+              >
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'var(--surface-alt)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.3rem', boxShadow: 'inset 0 0 10px rgba(255,255,255,0.05)' }}>📂</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 800, fontSize: '0.95rem', marginBottom: '2px' }}>기록 보관소</div>
+                  <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>과거의 몰입 기록 확인</div>
+                </div>
+                <span style={{ opacity: 0.3 }}>→</span>
+              </button>
+
+              <div style={{ marginTop: '1.5rem', fontSize: '0.7rem', opacity: 0.3, fontWeight: 800, paddingLeft: '0.5rem', marginBottom: '0.5rem', letterSpacing: '0.1em' }}>SETTINGS</div>
+
+              <div style={{ opacity: 0.4, display: 'flex', alignItems: 'center', gap: '14px', padding: '0.8rem 1rem', borderRadius: '14px', background: 'rgba(255,255,255,0.02)' }}>
+                <span style={{ fontSize: '1.1rem' }}>🎨</span>
+                <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>테마 커스텀</span>
+                <span style={{ marginLeft: 'auto', fontSize: '0.6rem', padding: '2px 6px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px' }}>SOON</span>
+              </div>
+
+              <div style={{ opacity: 0.4, display: 'flex', alignItems: 'center', gap: '14px', padding: '0.8rem 1rem', borderRadius: '14px', background: 'rgba(255,255,255,0.02)' }}>
+                <span style={{ fontSize: '1.1rem' }}>🛡️</span>
+                <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>집중 예치금</span>
+                <span style={{ marginLeft: 'auto', fontSize: '0.6rem', padding: '2px 6px', background: 'rgba(255,255,255,0.1)', borderRadius: '4px' }}>SOON</span>
+              </div>
+            </nav>
+
+            <div style={{ marginTop: 'auto', paddingBottom: 'env(safe-area-inset-bottom, 1rem)' }}>
+              <button
+                onClick={async () => { await supabase.auth.signOut(); router.push('/login'); }}
+                style={{
+                  width: '100%',
+                  padding: '1rem',
+                  borderRadius: '16px',
+                  color: '#ff5e5e',
+                  background: 'rgba(255,94,94,0.08)',
+                  border: '1px solid rgba(255,94,94,0.15)',
+                  fontSize: '0.9rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '10px'
+                }}
+              >
+                <span>🚪</span> 로그아웃
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* Header - Triple Flex Layout to ensure center alignment */}
       <header style={{
         display: 'flex',
@@ -493,7 +605,10 @@ export default function Home() {
       }}>
         {/* Left: Hamburger Menu */}
         <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}>
-          <button style={{ background: 'none', border: 'none', padding: '8px', cursor: 'pointer', opacity: 0.8 }}>
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            style={{ background: 'none', border: 'none', padding: '8px', cursor: 'pointer', opacity: 0.8 }}
+          >
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--foreground)' }}>
               <line x1="3" y1="12" x2="21" y2="12"></line>
               <line x1="3" y1="6" x2="21" y2="6"></line>
