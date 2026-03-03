@@ -700,7 +700,8 @@ export default function Home() {
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
-                        flex: 1
+                        maxWidth: '180px',
+                        flex: '1 1 auto'
                       }}>
                         {isCompleted && "✨ "}{task.title}
                       </span>
